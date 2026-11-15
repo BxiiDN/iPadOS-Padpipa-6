@@ -80,7 +80,7 @@ function Connect-PipaAdb {
     $prod = ((Invoke-Adb -Adb $Adb -Serial $s -ArgumentList @("shell", "getprop", "ro.product.device")).Output -join "").Trim()
     if ($prod -ne "pipa") { throw [System.InvalidOperationException]::new("device $s reports ro.product.device='$prod', not pipa") }
     $sn = ((Invoke-Adb -Adb $Adb -Serial $s -ArgumentList @("shell", "getprop", "ro.serialno")).Output -join "").Trim()
-    if ($sn -and $sn -cne $s) { throw [System.InvalidOperationException]::new("adb serial $s but ro.serialno is $sn: refusing (USB/TCP alias?)") }
+    if ($sn -and $sn -cne $s) { throw [System.InvalidOperationException]::new("adb serial $s but ro.serialno is ${sn}: refusing (USB/TCP alias?)") }
     return $s
 }
 

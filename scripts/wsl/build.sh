@@ -74,8 +74,14 @@ step_stage1() {
   log_run bootimg-check python3 "$ROOT/tools/checks/check_bootimg.py" "$OUT/boot-stage1.img" --stage1 --json "$OUT/check-boot-stage1.json"
 }
 step_kernel() {
-  : "${UNIXNU_IPSW:?set UNIXNU_IPSW to your local iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw}"
+  : "${UNIXNU_IPSW:?set UNIXNU_IPSW to your local iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw or the official URL}"
   export UNIXNU_IPSW
+  case $UNIXNU_IPSW in
+    https://updates.cdn-apple.com/*) echo "IPSW: official URL (members read by HTTP range; unixnu checks the pinned digests)";;
+    http*) echo "REFUSED: only Apple's update CDN or a local file"; exit 2;;
+    *) log_run ipsw-check python3 "$ROOT/tools/check_ipsw.py" --board "$WORK/UniXNU-pipa/board.toml" --ipsw "$UNIXNU_IPSW";;
+  esac
+  log_run kernel-inputs python3 "$ROOT/tools/check_inputs.py" --work "$WORK" --tree "$WORK/UniXNU/out/pipa/tree" --json "$OUT/missing-inputs.json"
   log_run ipsw unixnu ipsw fetch
   log_run kernel unixnu build kernel
   log_run firmware-check python3 "$ROOT/tools/checks/check_firmware.py" --manifest "$ROOT/manifest/firmware.toml" \

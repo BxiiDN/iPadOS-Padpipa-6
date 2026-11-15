@@ -17,7 +17,8 @@ for t in TouchBoardTests NativeBatteryTests ButtonsTests GpuPowerBoardTests Gest
   else echo "FAIL  $t"; fail=1; fi
 done
 if [ "$(uname -m)" = aarch64 ] || [ "$(uname -m)" = arm64 ]; then
-  if $cc -std=c11 -Wall -Wextra -Werror -I "$kit" -I "$pkg" "$pkg/A650Gmu.c" "$pkg/A650GmuTests.c" \
+  # _POSIX_C_SOURCE: glibc hides posix_memalign under strict -std=c11 (macOS, where the test was written, does not).
+  if $cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -I "$kit" -I "$pkg" "$pkg/A650Gmu.c" "$pkg/A650GmuTests.c" \
        "$kit/AdrenoFirmware.c" "$kit/AdrenoHfi.c" "$kit/AdrenoHfiStartup.c" "$kit/AdrenoHfiVotes.c" -o "$tmp/a650" && "$tmp/a650"; then
     echo "PASS  A650GmuTests (synthetic GMU image)"
   else echo "FAIL  A650GmuTests"; fail=1; fi

@@ -31,6 +31,7 @@ import check_board  # noqa: E402
 import sparse  # noqa: E402
 import flash_gate  # noqa: E402
 import check_inputs  # noqa: E402
+import check_ipsw  # noqa: E402
 
 MEMMAP_OK = """
 static ARM_MEMORY_REGION_DESCRIPTOR_EX gDeviceMemoryDescriptorEx[] = {
@@ -444,6 +445,40 @@ class MemoryReportTests(unittest.TestCase):
         self.assertGreater(m["hole_in_span_bytes"], 0)
         self.assertEqual(m["owned_bytes"], 0x100000000)
         self.assertLess(m["owned_fraction_of_banks"], 0.6)
+
+
+class IpswTests(unittest.TestCase):
+    board = {"ipsw": {"product": "iPad7,1", "version": "17.7.11", "build": "21H461", "device_class": "j120ap",
+                      "sha256": {"044-76034-038.dmg": __import__("hashlib").sha256(b"root").hexdigest()}}}
+
+    def ipsw(self, version="17.7.11", build="21H461", products=("iPad7,1", "iPad7,2"), dmg=b"root", dclass="j120ap"):
+        import plistlib, zipfile
+        path = tempfile.mktemp(suffix=".ipsw")
+        self.addCleanup(lambda: os.path.exists(path) and os.unlink(path))
+        with zipfile.ZipFile(path, "w") as z:
+            z.writestr("BuildManifest.plist", plistlib.dumps({"ProductVersion": version, "ProductBuildVersion": build,
+                       "SupportedProductTypes": list(products), "BuildIdentities": [{"Info": {"DeviceClass": dclass}}]}))
+            z.writestr("044-76034-038.dmg", dmg)
+        return path
+
+    def test_pinned_ipsw_passes(self):
+        self.assertEqual(check_ipsw.check(self.ipsw(), self.board), [])
+
+    def test_other_build_refused(self):
+        self.assertTrue(check_ipsw.check(self.ipsw(build="21H450"), self.board))
+
+    def test_other_model_refused(self):
+        self.assertTrue(check_ipsw.check(self.ipsw(products=("iPad8,1",), dclass="j317ap"), self.board))
+
+    def test_modified_root_image_refused(self):
+        self.assertTrue(any("sha256" in e for e in check_ipsw.check(self.ipsw(dmg=b"tampered"), self.board)))
+
+    def test_not_a_zip(self):
+        p = tempfile.mktemp()
+        with open(p, "wb") as f:
+            f.write(b"junk")
+        self.addCleanup(os.unlink, p)
+        self.assertTrue(check_ipsw.check(p, self.board))
 
 
 class KernelInputsTests(unittest.TestCase):

@@ -17,6 +17,9 @@ on:
         default: true
 permissions:
   contents: read
+defaults:
+  run:
+    shell: bash    # bash -eo pipefail: a failing command before | tee fails the step
 
 jobs:
   config:
@@ -60,6 +63,7 @@ jobs:
         run: python3 -m unittest discover -s tests -v
       - name: Upstream pipa driver host tests
         run: |
+          set -o pipefail
           git -C work/UniXNU submodule update --init --depth 1 kits/AdrenoFirmware
           scripts/ci/host-tests.sh work | tee host-tests-${{ matrix.os }}.log
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
