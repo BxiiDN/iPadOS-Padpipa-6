@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "provenance": {
+    "source": "stock-dtb",
+    "collected_at": "2026-11-15T22:20:49+00:00",
+    "dtb": "pipa.dtb"
+  },
+  "device": {
+    "product": "pipa",
+    "build_fingerprint": null,
+    "serial_sha256": null
+  },
+  "memory": {
+    "source": "stock-dtb",
+    "mem_total_kib": null,
+    "banks": [
+      [
+        "0x80000000",
+        "0x3bb00000"
+      ],
+      [
+        "0xc0000000",
+        "0x1c0000000"
+      ]
+    ]
+  },
+  "storage": {
+    "source": "missing",
+    "lba_bytes": null,
+    "userdata": null,
+    "disk_blocks": null,
+    "ufs_vendor": null,
+    "ufs_model": null,
+    "partitions": []
+  },
+  "panel": {
+    "source": "missing",
+    "name": null
+  },
+  "notes": [
+    "memory banks from the stock DTB; ABL fills /memory at boot, confirm on the unit"
+  ]
+}

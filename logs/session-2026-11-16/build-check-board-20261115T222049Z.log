@@ -1,0 +1,3 @@
+# python3 /home/claude/ipados-padpipa-6/tools/checks/check_board.py --board /home/claude/work-clean/UniXNU-pipa/board.toml --facts /home/claude/ipados-padpipa-6/out/pipa-8g256/unit-facts.stock.json
+# host: Linux vm 6.18.44-fc-v470 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux
+PASS  board /home/claude/work-clean/UniXNU-pipa/board.toml (flash allowed: False)

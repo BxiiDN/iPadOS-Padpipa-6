@@ -1,0 +1,28 @@
+{
+  "errors": [],
+  "warnings": [
+    "empty ramdisk: stage-1 image (UEFI and the UniXNU menu only, no payload)"
+  ],
+  "info": {
+    "kernel_size": "0x2ae18a",
+    "kernel_addr": "0x10008000",
+    "ramdisk_size": "0x0",
+    "ramdisk_addr": "0x0",
+    "second_size": "0x0",
+    "second_addr": "0x0",
+    "tags_addr": "0x10000100",
+    "page_size": "0x800",
+    "header_version": "0x1",
+    "os_version": "0x0",
+    "name": "",
+    "cmdline": "",
+    "recovery_dtbo_size": "0x0",
+    "recovery_dtbo_offset": "0x0",
+    "header_size": "0x670",
+    "shim_bytes": 192,
+    "fd_bytes": 3145728,
+    "appended_dtb_bytes": 1189782,
+    "sha256": "b85bf42b1a3664cdefc5ff73b3c7220aad5599274952f1a66919e3df29b48253",
+    "bytes": 2813952
+  }
+}

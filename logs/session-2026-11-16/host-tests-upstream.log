@@ -1,0 +1,40 @@
+== TouchBoardTests (2026-11-15T21:58:36Z) cc=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PASS: pipa touch board (TLMM tiles, clocks, SMMU pass-through on the tablet's SMMU)
+exit=0
+== NativeBatteryTests (2026-11-15T21:58:36Z) cc=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PASS: pipa battery (SOC, voltage, current, temperature, charge stage)
+exit=0
+== ButtonsTests (2026-11-15T21:58:36Z) cc=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PASS: pipa buttons (decoding and debounce)
+exit=0
+== GpuPowerBoardTests (2026-11-15T21:58:36Z) cc=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PASS: pipa GPU power board (stages 1-3, GMU clocks, command DB)
+exit=0
+== GesturesTests (2026-11-15T21:58:36Z) cc=cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+PASS: pipa scripted touches (geometry, edge band, stroke points)
+exit=0
+== A650GmuTests
+In file included from package/A650Gmu.c:2:
+package/A650Gmu.h:13:10: fatal error: AdrenoHfiStartup.h: No such file or directory
+   13 | #include "AdrenoHfiStartup.h"
+      |          ^~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+In file included from package/A650GmuTests.c:8:
+package/A650Gmu.h:13:10: fatal error: AdrenoHfiStartup.h: No such file or directory
+   13 | #include "AdrenoHfiStartup.h"
+      |          ^~~~~~~~~~~~~~~~~~~~
+compilation terminated.
+exit=1
+== A650GmuTests (synthetic image; AdrenoFirmware 20ad3d7)
+package/A650GmuTests.c: In function 'allocate':
+package/A650GmuTests.c:70:57: error: implicit declaration of function 'posix_memalign' [-Werror=implicit-function-declaration]
+   70 | static void *allocate(size_t n) {void *p = NULL; CHECK(!posix_memalign(&p, 4096, n)); memset(p, 0, n); return p;}
+      |                                                         ^~~~~~~~~~~~~~
+package/A650GmuTests.c:12:27: note: in definition of macro 'CHECK'
+   12 | #define CHECK(x) do {if(!(x)){fprintf(stderr,"line %d: %s\n",__LINE__,#x);exit(1);}}while(0)
+      |                           ^
+cc1: all warnings being treated as errors
+../UniXNU/kits/AdrenoFirmware/AdrenoHfi.c:5:2: error: #error Modern GMU HFI transport requires little-endian AArch64
+    5 | #error Modern GMU HFI transport requires little-endian AArch64
+      |  ^~~~~
+exit=1

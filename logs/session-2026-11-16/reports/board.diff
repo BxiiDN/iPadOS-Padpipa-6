@@ -1,0 +1,36 @@
+diff --git a/board.toml b/board.toml
+index 004212b..c5f4230 100644
+--- a/board.toml
++++ b/board.toml
+@@ -27,6 +27,7 @@ fetch = ["KernelCache", "DeviceTree", "StaticTrustCache", "Cryptex1,SystemTrustC
+ # Android's userdata (sda34 on the UFS LUN 0, 106.6 GiB), from the tablet's GPT, which agrees with sysfs. "unixnu build
+ # userdata" writes the image for it; flashing it erases Android's data. The windows are those of UniXNU-sheng: the same
+ # target image.
++# NOT-FOR-FLASH: userdata window below is the 128 GB reference unit's; measure this unit's GPT first.
+ [userdata]
+ first_lba = 0x293000
+ last_lba = 0x1d387fa
+@@ -154,12 +155,12 @@ BUILDID_STRING = "pipa-research"
+ volume = "PIPAESP"
+ size_mib = 192
+ loader = "firmware"
+-title = "pipa first boot: source 4K XNU to the panic screen"
++title = "iPadOS-Padpipa-6: Xiaomi Pad 6 8 GB / 256 GB"
+ # This tablet was upgraded to 16 GB. Android's /memory has the banks 0x80000000+0x37700000, 0xc0000000+0x1c0000000 and
+ # 0x800000000+0x200000000: the added 8 GiB is a bank of its own at 32 GiB. XNU takes dram-base and dram-size as one
+ # range (is_dram_addr, which only picks the attribute of device mappings), so it spans from the base to the end of the
+ # last bank; every register block lies below 0x80000000.
+-dram_size = "0x980000000"
++dram_size = "0x200000000"
+ skip_setup_tool = "scripts/seed-data-skip-setup.py"
+ # No input device yet: without these SpringBoard preferences iPadOS turns the display off about 30 s after it starts and
+ # puts the system to sleep, which ArmCpu does not support (UniXNU-tb128fu, UniXNU-qemu).
+@@ -277,7 +278,7 @@ chip_id = "207"
+ # the 32 GiB base: the native 4 KiB pool held 14 L2 pages, 5.75 GiB uses 12, and a 7.75 GiB window needs 18 (it would have
+ # stopped at a 4 GiB base too). patches/xnu/zzzz-bootstrap-table-pool.patch raises the pool to 34 pages, so 7.75 GiB is the
+ # next thing to try here; all 16 GB still needs several ranges in XNU's pmap and VM start-up (HANDOFF-pipa-memory.md).
+-owned_memory_size = "0x170000000"
++owned_memory_size = "0x100000000"
+ root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"   # the OS volume of the same IPSW
+ # All eight cores, boot CPU first: 0..0x300 Kryo 585 Silver (Cortex-A55), 0x400..0x600 Gold and 0x700 Gold Prime (Cortex-A77),
+ # as two scheduler clusters, E (the A55s) and P (the A77s), under the Edge scheduler (make-pipa-adt.py cluster-type,

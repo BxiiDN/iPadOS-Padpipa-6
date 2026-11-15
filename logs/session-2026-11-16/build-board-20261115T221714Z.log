@@ -1,0 +1,7 @@
+# python3 /home/claude/ipados-padpipa-6/tools/pipa_board.py --upstream /home/claude/work-clean/UniXNU-pipa/board.upstream.toml --facts /home/claude/ipados-padpipa-6/out/pipa-8g256/unit-facts.stock.json --overlay /home/claude/ipados-padpipa-6/device/pipa-8g256/overlay.toml -o /home/claude/work-clean/UniXNU-pipa/board.toml --report /home/claude/ipados-padpipa-6/out/pipa-8g256/board-report.json
+# host: Linux vm 6.18.44-fc-v470 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux
+  payload.dram_size                  "0x980000000" -> 0x200000000  (stock-dtb)
+  payload.adt.owned_memory_size      "0x170000000" -> 0x100000000  (overlay.toml)
+  payload.title                      "pipa first boot: source 4K XNU to the panic screen" -> iPadOS-Padpipa-6: Xiaomi Pad 6 8 GB / 256 GB  (overlay.toml)
+  WARNING: userdata window not measured on this unit (storage.source != measured)
+  flash/userdata allowed: False; kernel_args 924 bytes

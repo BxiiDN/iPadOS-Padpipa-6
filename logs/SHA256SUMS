@@ -1,0 +1,15 @@
+# Artifacts built in this session (2026-11-16, Ubuntu 24.04 x86_64, clang 18.1.3). The images are NOT in Git: the FD
+# embeds proprietary vendor UEFI drivers (Project-Silicium Device-Binaries). Rebuild with scripts/wsl/build.sh all.
+#
+# Clean build (WORK=work-clean, scripts/wsl/build.sh bootstrap board firmware stage1 check):
+def454281ba8916767a2e45f7feca577612985c91813c103d3e8aeabe375f6d2  SILICIUM_UEFI.fd
+b85bf42b1a3664cdefc5ff73b3c7220aad5599274952f1a66919e3df29b48253  boot-stage1.img
+# First build (manual unixnu run in another directory) - same sizes, different digests: the DEBUG EDK2 build is not
+# bit-reproducible across build directories yet (see STATUS.md).
+2d6adf84bc089cb54a9be9ca43dadce7761c2bd38bab87325a7b551ff1ba955d  SILICIUM_UEFI.fd (first build)
+ede29907d12da5591ca0548801cea7a157cc5f76f244edfec765c3f089955965  boot-stage1.img (first build)
+# Inputs
+1798836b51c76b923a8915351300b66f7684fef325f8bb1686eed0ed65fe3350  uefi-pipa Resources/DTBs/pipa.dtb
+9b83bcc9dcac5049bf304a8763433201c744fb598aefdb0a0810b4ef1d7bddba  uefi-pipa Platforms/Xiaomi/pipaPkg/Library/MemoryMapLib/MemoryMapLib.c
+ceb5d6d9799e33d2f4103ee8b9c4e457e7bb14a0fd28c59a8e0236013442f2a5  UniXNU-pipa board.toml (upstream)
+5a4860a5fa9a363beb7808bb409fbc93127db3de56de37280b5312c2d6b003b1  board.toml generated for pipa-8g256 (stock-dtb facts)

@@ -1,0 +1,34 @@
+{
+  "changes": [
+    {
+      "key": "payload.dram_size",
+      "old": "\"0x980000000\"",
+      "new": "0x200000000",
+      "source": "stock-dtb"
+    },
+    {
+      "key": "payload.adt.owned_memory_size",
+      "old": "\"0x170000000\"",
+      "new": "0x100000000",
+      "source": "overlay.toml"
+    },
+    {
+      "key": "payload.title",
+      "old": "\"pipa first boot: source 4K XNU to the panic screen\"",
+      "new": "iPadOS-Padpipa-6: Xiaomi Pad 6 8 GB / 256 GB",
+      "source": "overlay.toml"
+    }
+  ],
+  "warnings": [
+    "userdata window not measured on this unit (storage.source != measured)"
+  ],
+  "flash_allowed": false,
+  "kernel_args_bytes": 924,
+  "dram_size": "0x200000000",
+  "owned_memory_size": "0x100000000",
+  "facts_provenance": {
+    "source": "stock-dtb",
+    "collected_at": "2026-11-15T22:17:14+00:00",
+    "dtb": "pipa.dtb"
+  }
+}
