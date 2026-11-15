@@ -11,27 +11,35 @@ from __future__ import annotations
 
 import argparse
 import os
-import struct
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "checks"))
 import unitfacts  # noqa: E402
+import sparse  # noqa: E402
 import check_board  # noqa: E402
 
 ROOT = os.path.dirname(HERE)
-SPARSE_MAGIC = 0xED26FF3A
 
 
-def image_bytes(path: str) -> int:
-    """Expanded size: Android sparse images carry it in their header (blk_sz * total_blks)."""
-    with open(path, "rb") as f:
-        head = f.read(28)
-    if len(head) >= 28 and struct.unpack_from("<I", head, 0)[0] == SPARSE_MAGIC:
-        blk_sz, total_blks = struct.unpack_from("<II", head, 12)
-        return blk_sz * total_blks
-    return os.path.getsize(path)
+def image_problems(path: str, window: int, lba: int) -> tuple[list[str], dict | None]:
+    """The image fastboot would write: every sparse chunk is walked; the expanded size must fit the window and be a
+    whole number of logical blocks."""
+    try:
+        inf = sparse.info(path)
+    except sparse.SparseError as e:
+        return [f"invalid sparse image: {e}"], None
+    out = []
+    if inf["expanded"] == 0:
+        out.append("image is empty")
+    if inf["expanded"] % lba:
+        out.append(f"expanded size {inf['expanded']} is not a multiple of the {lba}-byte block")
+    if inf["sparse"] and inf["blk_sz"] % lba:
+        out.append(f"sparse block size {inf['blk_sz']} is not a multiple of {lba}")
+    if inf["expanded"] > window:
+        out.append(f"image expands to {inf['expanded']} bytes, userdata window is {window}")
+    return out, inf
 
 
 def main(argv: list[str]) -> int:
@@ -51,10 +59,13 @@ def main(argv: list[str]) -> int:
         reasons.append("board.toml userdata window is not the measured one")
     if not reasons:
         ud = facts["storage"]["userdata"]
-        window = (int(ud["last_lba"], 0) - int(ud["first_lba"], 0) + 1) * facts["storage"]["lba_bytes"]
-        size = image_bytes(args.image)
-        if size > window:
-            reasons.append(f"image expands to {size} bytes, userdata window is {window}")
+        lba = facts["storage"]["lba_bytes"]
+        window = (int(ud["last_lba"], 0) - int(ud["first_lba"], 0) + 1) * lba
+        img_reasons, inf = image_problems(args.image, window, lba)
+        reasons += img_reasons
+        if inf:
+            print(f"image: {'sparse' if inf['sparse'] else 'raw'}, expands to {inf['expanded']} bytes "
+                  f"({inf['expanded'] / 2**30:.2f} GiB) of a {window / 2**30:.2f} GiB window")
     for r in reasons:
         print(f"REFUSED  {r}")
     if reasons:

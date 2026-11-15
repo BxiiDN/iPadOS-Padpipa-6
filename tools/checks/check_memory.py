@@ -133,8 +133,17 @@ def check(memmap: list[dict], tree, banks: list[tuple[int, int]], owned: int | N
             biggest = max((b - a for a, b in free), default=0)
             errors.append(f"no free run holds owned_memory_size {owned:#x}; largest is {biggest:#x} "
                           f"(firmware top reserve assumed {top_reserve:#x})")
+    # Address span (what dram_size describes) is NOT the RAM XNU can use: only owned_memory_size is handed to it.
+    bank_bytes = sum(s for _a, s in banks)
+    span = max(a + s for a, s in banks) - min(a for a, _s in banks)
+    reserved = sum(min(d["base"] + d["size"], a + z) - max(d["base"], a)
+                   for d in dram_desc for a, z in banks if overlaps(d["base"], d["base"] + d["size"], a, a + z))
+    free_bytes = sum(b - a for a, b in free)
+    memory = {"address_span_bytes": span, "bank_bytes": bank_bytes, "hole_in_span_bytes": span - bank_bytes,
+              "uefi_reserved_bytes": reserved, "free_runs_bytes": free_bytes,
+              "owned_bytes": owned or 0, "owned_fraction_of_banks": round((owned or 0) / bank_bytes, 3) if bank_bytes else 0}
     return {
-        "errors": errors, "warnings": warnings,
+        "errors": errors, "warnings": warnings, "memory": memory,
         "banks": [[f"{a:#x}", f"{s:#x}"] for a, s in banks],
         "uefi_descriptors": len(memmap), "dt_carveouts": len(carve), "uncovered_no_map": uncovered,
         "free_runs": [[f"{a:#x}", f"{b - a:#x}"] for a, b in free],
@@ -179,6 +188,10 @@ def main(argv: list[str]) -> int:
         print(f"WARN  {w}")
     for e in res["errors"]:
         print(f"FAIL  {e}")
+    m = res["memory"]
+    print(f"      address span {m['address_span_bytes'] / 2**30:.2f} GiB (dram_size), banks {m['bank_bytes'] / 2**30:.2f} GiB, "
+          f"hole {m['hole_in_span_bytes'] / 2**30:.2f} GiB, firmware fixed {m['uefi_reserved_bytes'] / 2**20:.0f} MiB, "
+          f"XNU gets {m['owned_bytes'] / 2**30:.2f} GiB ({m['owned_fraction_of_banks'] * 100:.0f}% of the banks)")
     print(f"{'FAIL' if res['errors'] else 'PASS'}  memory: {res['uefi_descriptors']} UEFI descriptors, "
           f"{res['dt_carveouts']} DT carve-outs, banks {res['banks']}, XNU window {res['predicted_xnu_window']}")
     return 1 if res["errors"] else 0

@@ -28,6 +28,9 @@ import check_bootimg  # noqa: E402
 import check_firmware  # noqa: E402
 import check_symbols  # noqa: E402
 import check_board  # noqa: E402
+import sparse  # noqa: E402
+import flash_gate  # noqa: E402
+import check_inputs  # noqa: E402
 
 MEMMAP_OK = """
 static ARM_MEMORY_REGION_DESCRIPTOR_EX gDeviceMemoryDescriptorEx[] = {
@@ -44,20 +47,31 @@ BANKS_8G = [(0x80000000, 0x3BB00000), (0xC0000000, 0x1C0000000)]
 BANKS_16G = BANKS_8G + [(0x800000000, 0x200000000)]
 
 
+SERIAL_HASH = "ab" * 32
+
+
 def facts_with(banks, storage=None, source="measured"):
     f = unitfacts.empty()
     f["provenance"]["source"] = source
     f["device"]["product"] = "pipa"
+    f["device"]["serial_sha256"] = SERIAL_HASH
     f["memory"] = {"source": source, "mem_total_kib": None, "banks": [[hex(a), hex(s)] for a, s in banks]}
     if storage:
         f["storage"] = storage
     return f
 
 
-def storage_256(first=0x293000, gib=220.0):
-    last = first + int(gib * 2**30 / 4096) - 1
+DISK_256_SECTORS = 499122176   # 255.55 GB, a 256 GB UFS LUN 0 in 512-byte sectors
+
+
+def storage_256(first=0x293000, gib=220.0, disk=DISK_256_SECTORS, extra_parts=None):
+    blocks = int(gib * 2**30 / 4096)
+    last = first + blocks - 1
+    parts = [{"dev": "sda1", "name": "ssd", "start_512": 6 * 8, "size_512": 2 * 8},
+             {"dev": "sda33", "name": "metadata", "start_512": 0x200000 * 8, "size_512": 0x93000 * 8},
+             {"dev": "sda34", "name": "userdata", "start_512": first * 8, "size_512": blocks * 8}] + (extra_parts or [])
     return {"source": "measured", "lba_bytes": 4096, "userdata": {"dev": "sda34", "first_lba": hex(first), "last_lba": hex(last)},
-            "disk_blocks": None, "ufs_vendor": None, "ufs_model": None, "partitions": []}
+            "disk_sectors_512": disk, "disk_blocks": disk // 8, "ufs_vendor": None, "ufs_model": None, "partitions": parts}
 
 
 def fat16(label="PIPAESP", size=1 << 20):
@@ -267,9 +281,10 @@ class BoardTests(unittest.TestCase):
         self.assertIn(pipa_board.NOT_FOR_FLASH, text)
         self.assertEqual(check_board.check(text, facts_with(BANKS_8G))["errors"], [])
 
-    def test_16g_facts_give_reference_value(self):
-        text, _ = pipa_board.generate(UPSTREAM_BOARD_SNIPPET, facts_with(BANKS_16G), self.overlay)
-        self.assertIn('dram_size = "0x980000000"', text)
+    def test_16g_facts_refused_for_this_8g_target(self):
+        # The reference tablet's 16 GB banks are not this unit's: the generator must not accept them.
+        with self.assertRaises(pipa_board.BoardError):
+            pipa_board.generate(UPSTREAM_BOARD_SNIPPET, facts_with(BANKS_16G), self.overlay)
 
     def test_measured_256g_gpt_enables_flash(self):
         facts = facts_with(BANKS_8G, storage_256())
@@ -298,11 +313,42 @@ class BoardTests(unittest.TestCase):
 
 
 class UnitFactsTests(unittest.TestCase):
+    def kv(self, lines, *, bom=False, crlf=False):
+        sep = "\r\n" if crlf else "\n"
+        with tempfile.NamedTemporaryFile("wb", suffix=".kv", delete=False) as f:
+            f.write((b"\xef\xbb\xbf" if bom else b"") + sep.join(lines).encode())
+        try:
+            return unitfacts.from_adb_kv(f.name)
+        finally:
+            os.unlink(f.name)
+
+    def base_lines(self):
+        reg = fdtbuild.reg64(*BANKS_8G).hex()
+        return ["ro.product.device=pipa", "serial_sha256=" + SERIAL_HASH, "adb_serial_sha256=" + SERIAL_HASH,
+                "dt_memory_reg=" + reg, "lun0_lba_bytes=4096", f"lun0_size_512={DISK_256_SECTORS}",
+                f"part=sda34|userdata|{0x293000 * 8}|{int(220 * 2**30 / 512)}"]
+
+    def test_bom_and_crlf_from_windows(self):
+        # Windows PowerShell 5.1 Out-File -Encoding utf8 writes a BOM; the first key must still parse.
+        lines = ["ro.product.device=pipa"] + self.base_lines()[1:]
+        for f in (self.kv(lines, bom=True), self.kv(lines, crlf=True), self.kv(lines, bom=True, crlf=True)):
+            self.assertEqual(f["device"]["product"], "pipa")
+            self.assertEqual(unitfacts.banks(f), BANKS_8G)
+
+    def test_identity_mismatch(self):
+        lines = [l for l in self.base_lines() if not l.startswith("adb_serial")] + ["adb_serial_sha256=" + "cd" * 32]
+        self.assertTrue(any("ro.serialno" in p for p in unitfacts.problems(self.kv(lines), need_storage=False)))
+
+    def test_measured_without_serial_refused(self):
+        lines = [l for l in self.base_lines() if not l.startswith(("serial_sha256", "adb_serial"))]
+        self.assertTrue(any("serial hash" in p for p in unitfacts.problems(self.kv(lines), need_storage=False)))
+
     def test_from_adb_kv(self):
         reg = fdtbuild.reg64(*BANKS_8G).hex()
-        lines = ["collector_version=1", "root=1", "ro.product.device=pipa", "mem_total_kib=7660000",
+        lines = ["collector_version=1", "root=1", "ro.product.device=pipa", "mem_total_kib=7660000", "serial_sha256=" + SERIAL_HASH,
                  "dt_memory_reg=" + " ".join(reg[i:i + 2] for i in range(0, len(reg), 2)),
                  "lun0_lba_bytes=4096", "lun0_size_512=499122176",
+                 f"part=sda33|metadata|{0x200000 * 8}|{0x93000 * 8}",
                  f"part=sda34|userdata|{0x293000 * 8}|{int(220 * 2**30 / 512)}", "errors="]
         with tempfile.NamedTemporaryFile("w", suffix=".kv", delete=False) as f:
             f.write("\n".join(lines))
@@ -319,6 +365,99 @@ class UnitFactsTests(unittest.TestCase):
         f = facts_with(BANKS_16G)
         f["memory"]["mem_total_kib"] = 7660000   # an 8 GB MemTotal against 16 GB of banks
         self.assertTrue(unitfacts.problems(f, need_storage=False))
+
+
+class StorageTests(unittest.TestCase):
+    def prob(self, st):
+        return unitfacts.problems(facts_with(BANKS_8G, st), need_storage=True)
+
+    def test_good_256g(self):
+        self.assertEqual(self.prob(storage_256()), [])
+
+    def test_128g_disk_refused(self):
+        self.assertTrue(any("256 GB" in p for p in self.prob(storage_256(disk=249737216))))
+
+    def test_partition_past_disk_end(self):
+        st = storage_256(gib=239.0)
+        self.assertTrue(any("ends past the disk" in p for p in self.prob(st)))
+
+    def test_misaligned_partition(self):
+        st = storage_256(extra_parts=[{"dev": "sda2", "name": "x", "start_512": 100 * 8 + 1, "size_512": 8}])
+        self.assertTrue(any("not aligned" in p for p in self.prob(st)))
+
+    def test_overlap(self):
+        st = storage_256(extra_parts=[{"dev": "sda32", "name": "y", "start_512": 0x290000 * 8, "size_512": 0x10000 * 8}])
+        self.assertTrue(any("overlap" in p for p in self.prob(st)))
+
+    def test_window_differs_from_gpt_entry(self):
+        st = storage_256()
+        st["userdata"]["last_lba"] = hex(int(st["userdata"]["last_lba"], 16) - 1)
+        self.assertTrue(any("own GPT entry" in p for p in self.prob(st)))
+
+    def test_missing_partition_table(self):
+        st = storage_256()
+        st["partitions"] = []
+        self.assertTrue(any("partition table" in p for p in self.prob(st)))
+
+    def test_8g_ram_bounds(self):
+        self.assertTrue(any("not an 8 GB" in p for p in unitfacts.problems(facts_with([(0x80000000, 0x3BB00000)]), need_storage=False)))
+
+
+class SparseTests(unittest.TestCase):
+    def write(self, blob):
+        f = tempfile.NamedTemporaryFile(delete=False)
+        f.write(blob)
+        f.close()
+        self.addCleanup(os.unlink, f.name)
+        return f.name
+
+    def test_expanded_size(self):
+        img = self.write(sparse.build([(sparse.RAW, 2, b"\0" * 8192), (sparse.DONT_CARE, 1000, b""), (sparse.FILL, 3, b"\0\0\0\0")]))
+        i = sparse.info(img)
+        self.assertEqual(i["expanded"], 1005 * 4096)
+        self.assertEqual(flash_gate.image_problems(img, 1005 * 4096, 4096)[0], [])
+        self.assertTrue(flash_gate.image_problems(img, 1004 * 4096, 4096)[0])
+
+    def test_truncated(self):
+        blob = sparse.build([(sparse.RAW, 2, b"\0" * 8192)])
+        with self.assertRaises(sparse.SparseError):
+            sparse.info(self.write(blob[:-100]))
+
+    def test_header_block_count_lies(self):
+        blob = bytearray(sparse.build([(sparse.DONT_CARE, 10, b"")]))
+        struct.pack_into("<I", blob, 16, 11)
+        with self.assertRaises(sparse.SparseError):
+            sparse.info(self.write(bytes(blob)))
+
+    def test_raw_not_block_multiple(self):
+        p, _ = flash_gate.image_problems(self.write(b"\1" * 5000), 1 << 20, 4096)
+        self.assertTrue(any("multiple" in x for x in p))
+
+
+class MemoryReportTests(unittest.TestCase):
+    def test_span_is_not_ram(self):
+        tree = fdt.parse(fdtbuild.pipa_like())
+        r = check_memory.check(check_memory.parse_memmap(MEMMAP_OK), tree, BANKS_8G, 0x100000000, 192 << 20, 0x10000000)
+        m = r["memory"]
+        self.assertEqual(m["address_span_bytes"], 0x200000000)
+        self.assertEqual(m["bank_bytes"], 0x3BB00000 + 0x1C0000000)
+        self.assertGreater(m["hole_in_span_bytes"], 0)
+        self.assertEqual(m["owned_bytes"], 0x100000000)
+        self.assertLess(m["owned_fraction_of_banks"], 0.6)
+
+
+class KernelInputsTests(unittest.TestCase):
+    def test_missing_builder_is_reported(self):
+        work = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, work)
+        for d in ("UniXNU/scripts", "UniXNU-pipa/scripts"):
+            os.makedirs(os.path.join(work, d))
+        open(os.path.join(work, "UniXNU/scripts/build-arm-driver.py"), "w").close()
+        with open(os.path.join(work, "UniXNU-pipa/board.toml"), "w") as f:
+            f.write('[kernel]\narchives = ["build-arm-driver.py ArmCpu", "build-verified-root-key.py --pin 70a5"]\n')
+        r = check_inputs.check(work, None)
+        self.assertIn("build-verified-root-key.py --pin 70a5", r["missing"])
+        self.assertNotIn("build-arm-driver.py ArmCpu", r["missing"])
 
 
 @unittest.skipUnless(os.environ.get("PIPA_UEFI"), "set PIPA_UEFI to a uefi-pipa checkout for the integration test")
