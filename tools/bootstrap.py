@@ -27,7 +27,7 @@ def git(*args: str, cwd: str | None = None, check: bool = True) -> str:
     return r.stdout.strip()
 
 
-def checkout(name: str, src: dict, work: str) -> None:
+def checkout(name: str, src: dict, work: str, submodules: bool = True) -> None:
     path = os.path.join(work, name)
     commit = src["commit"]
     if not os.path.isdir(os.path.join(path, ".git")):
@@ -40,13 +40,14 @@ def checkout(name: str, src: dict, work: str) -> None:
     head = git("rev-parse", "HEAD", cwd=path)
     if head != commit:
         raise SystemExit(f"{name}: HEAD {head} != pinned {commit}")
-    if name == "UniXNU-pipa":
+    if name == "UniXNU-pipa" and submodules:
         # The device repository's driver forks are gitlinks; their commits are the pins in sources.lock.toml.
         git("submodule", "update", "--init", "--depth", "1", cwd=path)
         for sub, want in src.get("drivers", {}).items():
             got = git("rev-parse", "HEAD", cwd=os.path.join(path, sub))
             if got != want:
                 raise SystemExit(f"{name}/{sub}: {got} != pinned {want}")
+    if name == "UniXNU-pipa":
         # Keep upstream's board file next to the generated one (tools/pipa_board.py writes board.toml).
         up = os.path.join(path, "board.upstream.toml")
         if not os.path.exists(up):
@@ -71,6 +72,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--work", default=os.path.join(ROOT, "work"))
     ap.add_argument("--only")
     ap.add_argument("--verify", action="store_true")
+    ap.add_argument("--no-submodules", action="store_true", help="skip the device repository's driver forks (checks only)")
     args = ap.parse_args(argv)
     with open(os.path.join(ROOT, "manifest", "sources.lock.toml"), "rb") as f:
         lock = tomllib.load(f)["source"]
@@ -79,7 +81,7 @@ def main(argv: list[str]) -> int:
     if args.verify:
         return 0 if all(verify(n, lock[n], args.work) for n in names) else 1
     for n in names:
-        checkout(n, lock[n], args.work)
+        checkout(n, lock[n], args.work, not args.no_submodules)
     print("bootstrap done; next: scripts/wsl/build.sh board")
     return 0
 

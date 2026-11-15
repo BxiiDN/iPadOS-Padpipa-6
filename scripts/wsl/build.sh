@@ -23,6 +23,8 @@ OVERLAY=$ROOT/device/$UNIT/overlay.toml
 OUT=$ROOT/out/$UNIT
 LOGS=$ROOT/logs
 export UNIXNU_UEFI=$WORK/uefi-pipa
+# EDK2 BaseTools orders PCD flag expressions through Python sets: fixed hashing makes AutoGen.c, and the FD, stable.
+export PYTHONHASHSEED=0
 mkdir -p "$OUT" "$LOGS"
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 
