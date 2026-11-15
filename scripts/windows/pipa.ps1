@@ -145,8 +145,8 @@ switch ($Command) {
         Info "tablet reports $count files, $kib KiB under /sdcard; pulling to $dst\sdcard"
         $pull = Invoke-Adb -Adb $Adb -Serial $s -ArgumentList @("pull", "/sdcard/", $dst) -AllowFail
         $fp = ((Invoke-Adb -Adb $Adb -Serial $s -ArgumentList @("shell", "getprop", "ro.build.fingerprint")).Output -join "").Trim()
-        $bytes = [UInt64]0; if ($kib -match '^\d+$') { $bytes = [UInt64]$kib * 1024 }
-        $m = New-BackupManifest -Dir $dst -RemoteFiles ([UInt64]$count) -RemoteBytes $bytes -PullExit $pull.ExitCode `
+        $bytes = [long]0; if ($kib -match '^\d+$') { $bytes = [long]$kib * 1024 }
+        $m = New-BackupManifest -Dir $dst -RemoteFiles ([long]$count) -RemoteBytes $bytes -PullExit $pull.ExitCode `
             -Device @{ serial_sha256 = (Get-StringSha256 $s); fingerprint = $fp }
         $problems = @(Test-Backup -Dir $dst -SerialSha256 (Get-StringSha256 $s))
         if ($problems) { $problems | Select-Object -First 20 | ForEach-Object { Write-Host "  $_" }; Fail "backup NOT valid ($($m.local_files)/$($m.remote_files) files, pull exit $($pull.ExitCode))" }
@@ -174,7 +174,7 @@ switch ($Command) {
         $json = Join-Path $Logs "check-boot-$Stamp.json"
         Invoke-Wsl ("python3 tools/checks/check_bootimg.py $(Q (WslPath $img)) --stage1 --json $(Q (WslPath $json))")
         $check = Get-Content -LiteralPath $json -Raw -Encoding UTF8 | ConvertFrom-Json
-        $stage1 = ([Convert]::ToUInt64(($check.info.ramdisk_size -replace '^0x', ''), 16) -eq 0)
+        $stage1 = ([Convert]::ToInt64(($check.info.ramdisk_size -replace '^0x', ''), 16) -eq 0)
         $s = Connect-PipaFastboot -Fastboot $Fastboot -Serial $Serial
         $hash = Get-FileSha256 $img
         if ($stage1) {

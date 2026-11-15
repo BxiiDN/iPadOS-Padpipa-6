@@ -100,12 +100,12 @@ function Test-UnitIdentity {
     if (-not $want) { $p += "unit facts carry no serial hash: collect them again with this script" }
     elseif ($want -ne (Get-StringSha256 $Serial)) { $p += "unit facts were measured on another device (serial hash differs)" }
     if ($Facts.provenance.source -ne "measured") { $p += "unit facts are '$($Facts.provenance.source)', not measured on the tablet" }
-    return , $p
+    return $p
 }
 
 function ConvertFrom-FastbootSize { param([string] $Text)
-    if ($Text -match '^0x([0-9a-fA-F]+)$') { return [Convert]::ToUInt64($Matches[1], 16) }
-    if ($Text -match '^\d+$') { return [UInt64]$Text }
+    if ($Text -match '^0x([0-9a-fA-F]+)$') { return [Convert]::ToInt64($Matches[1], 16) }
+    if ($Text -match '^\d+$') { return [long]$Text }
     throw [System.InvalidOperationException]::new("unparseable fastboot size '$Text'") }
 
 function Test-UserdataLive {
@@ -113,11 +113,12 @@ function Test-UserdataLive {
     param([string] $Fastboot, [string] $Serial, [Parameter(Mandatory)] $Facts)
     $p = @()
     $st = $Facts.storage
-    if ($st.source -ne "measured" -or -not $st.userdata) { return , @("userdata window not measured") }
-    $lba = [UInt64]$st.lba_bytes
-    $first = [Convert]::ToUInt64(($st.userdata.first_lba -replace '^0x', ''), 16)
-    $last = [Convert]::ToUInt64(($st.userdata.last_lba -replace '^0x', ''), 16)
-    $want = ($last - $first + 1) * $lba
+    if ($st.source -ne "measured" -or -not $st.userdata) { return @("userdata window not measured") }
+    # [long] throughout: mixing UInt64 with Int32 makes PowerShell fall back to Double.
+    $lba = [long]$st.lba_bytes
+    $first = [Convert]::ToInt64(($st.userdata.first_lba -replace '^0x', ''), 16)
+    $last = [Convert]::ToInt64(($st.userdata.last_lba -replace '^0x', ''), 16)
+    $want = [long](($last - $first + [long]1) * $lba)
     $size = ConvertFrom-FastbootSize (Get-FastbootVar -Fastboot $Fastboot -Serial $Serial -Name "partition-size:userdata")
     if ($size -ne $want) { $p += "bootloader reports userdata $size bytes, measured window is $want bytes" }
     $r = Invoke-Fastboot -Fastboot $Fastboot -Serial $Serial -ArgumentList @("getvar", "logical-block-size") -AllowFail
@@ -129,7 +130,7 @@ function Test-UserdataLive {
     if ($Facts.device.PSObject.Properties.Name -contains "slot_suffix" -and $Facts.device.slot_suffix -and $slot -notmatch [regex]::Escape(($Facts.device.slot_suffix -replace '^_', ''))) {
         $p += "active slot changed since measurement ($slot vs $($Facts.device.slot_suffix))"
     }
-    return , $p
+    return $p
 }
 
 function Write-Utf8NoBom { param([string] $Path, [string] $Text)
@@ -165,7 +166,7 @@ function Save-DeviceFile {
 
 function New-BackupManifest {
     <# Hash every file under $Dir\sdcard and record what the tablet said it had, so Test-Backup can prove completeness. #>
-    param([string] $Dir, [UInt64] $RemoteFiles, [UInt64] $RemoteBytes, [int] $PullExit, [hashtable] $Device)
+    param([string] $Dir, [long] $RemoteFiles, [long] $RemoteBytes, [int] $PullExit, [hashtable] $Device)
     $root = Join-Path $Dir "sdcard"
     $files = @()
     if (Test-Path -LiteralPath $root) {
@@ -174,16 +175,16 @@ function New-BackupManifest {
             $files += [ordered]@{ path = $f.FullName.Substring($base.Length + 1).Replace('\', '/'); bytes = $f.Length; sha256 = (Get-FileSha256 $f.FullName) }
         }
     }
-    $localBytes = [UInt64]0; foreach ($f in $files) { $localBytes += [UInt64]$f.bytes }
+    $localBytes = [long]0; foreach ($f in $files) { $localBytes += [long]$f.bytes }
     $m = [ordered]@{
         schema = 1; created_utc = (Get-Date).ToUniversalTime().ToString("o"); device = $Device
         covered = @("/sdcard (internal shared storage: DCIM, Download, Documents, Pictures, Music, Movies, app folders under Android/media)")
         not_covered = @("app private data (/data/data, /data/user): use each app's own backup or the Xiaomi/Google account",
             "accounts, Wi-Fi networks and system settings", "Android/data and Android/obb of apps on Android 11+ (not readable over adb)")
         pull_exit = $PullExit; remote_files = $RemoteFiles; remote_bytes = $RemoteBytes
-        local_files = [UInt64]$files.Count; local_bytes = $localBytes; files = $files
+        local_files = [long]$files.Count; local_bytes = $localBytes; files = $files
     }
-    $m.complete = ($PullExit -eq 0) -and ([UInt64]$files.Count -ge $RemoteFiles) -and ($RemoteFiles -gt 0)
+    $m.complete = ($PullExit -eq 0) -and ([long]$files.Count -ge $RemoteFiles) -and ($RemoteFiles -gt 0)
     Write-Utf8NoBom -Path (Join-Path $Dir "manifest.json") -Text ($m | ConvertTo-Json -Depth 6)
     return $m
 }
@@ -193,7 +194,7 @@ function Test-Backup {
     param([string] $Dir, [string] $SerialSha256)
     $p = @()
     $mf = Join-Path $Dir "manifest.json"
-    if (-not (Test-Path -LiteralPath $mf)) { return , @("$Dir has no manifest.json") }
+    if (-not (Test-Path -LiteralPath $mf)) { return @("$Dir has no manifest.json") }
     $m = Get-Content -LiteralPath $mf -Raw -Encoding UTF8 | ConvertFrom-Json
     if (-not $m.complete) { $p += "manifest says the backup is incomplete (pull exit $($m.pull_exit), $($m.local_files)/$($m.remote_files) files)" }
     if ($SerialSha256 -and $m.device.serial_sha256 -ne $SerialSha256) { $p += "backup belongs to another device" }
@@ -203,7 +204,7 @@ function Test-Backup {
         if (-not (Test-Path -LiteralPath $path)) { $p += "missing: $($f.path)"; continue }
         if ((Get-Item -LiteralPath $path).Length -ne $f.bytes -or (Get-FileSha256 $path) -ne $f.sha256) { $p += "changed: $($f.path)" }
     }
-    return , $p
+    return $p
 }
 
 Export-ModuleMember -Function Invoke-Native, Get-DeviceList, Select-Device, Invoke-Adb, Invoke-Fastboot, Get-FastbootVar,

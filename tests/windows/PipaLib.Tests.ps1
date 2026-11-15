@@ -82,7 +82,7 @@ Describe "Measured facts are bound to the device and re-checked live" {
             device = [pscustomobject]@{ product = "pipa"; serial_sha256 = (Get-StringSha256 "F1") }
             storage = [pscustomobject]@{ source = "measured"; lba_bytes = 4096
                 userdata = [pscustomobject]@{ first_lba = "0x293000"; last_lba = "0x392fff" } } }
-        $global:PipaWant = (0x392fff - 0x293000 + 1) * 4096
+        $global:PipaWant = [long](0x392fff - 0x293000 + 1) * [long]4096
     }
     It "accepts the measured device" { (Test-UnitIdentity -Facts $script:facts -Serial F1).Count | Should -Be 0 }
     It "refuses facts of another device" { (@(Test-UnitIdentity -Facts $script:facts -Serial F2) -join " ") | Should -Match "another device" }
