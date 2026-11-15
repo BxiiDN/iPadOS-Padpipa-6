@@ -25,6 +25,12 @@ LOGS=$ROOT/logs
 export UNIXNU_UEFI=$WORK/uefi-pipa
 # EDK2 BaseTools orders PCD flag expressions through Python sets: fixed hashing makes AutoGen.c, and the FD, stable.
 export PYTHONHASHSEED=0
+# Path normalization that keeps file names and ASSERT locations (docs/REPRODUCIBILITY.md): clang maps the work root to
+# \pipa in __FILE__ and debug info; lld-link stores only the PDB file name.
+export CCC_OVERRIDE_OPTIONS="# +-ffile-prefix-map=$WORK=/pipa"
+export _LINK_='/pdbaltpath:%_PDB% /Brepro'
+# Pinned compressor for boot.img (unixnu bootimg.py gzip): classic zlib 1.3 as on Ubuntu 24.04 (zlib-ng differs).
+PIPA_ZLIB=${PIPA_ZLIB:-1.3}
 mkdir -p "$OUT" "$LOGS"
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 
@@ -67,13 +73,35 @@ step_firmware() {
   log_run firmware unixnu build firmware
   cp "$UNIXNU_UEFI/Build/pipaPkg/DEBUG_CLANGPDB/FV/SILICIUM_UEFI.fd" "$OUT/SILICIUM_UEFI.fd"
 }
+check_zlib() {
+  local z; z=$(python3 -c 'import zlib; print(zlib.ZLIB_RUNTIME_VERSION)')
+  [ "$z" = "$PIPA_ZLIB" ] || { echo "REFUSED: python3 zlib is $z, pinned $PIPA_ZLIB (set PIPA_ZLIB=$z to build anyway; the image will differ)"; exit 2; }
+}
 step_stage1() {
+  check_zlib
   log_run bootimg-stage1 unixnu bootimg --dtb "$UNIXNU_UEFI/Resources/DTBs/pipa.dtb" --ramdisk none
   cp "$WORK/UniXNU/out/pipa/boot/boot.img" "$OUT/boot-stage1.img"
   cp "$WORK/UniXNU/out/pipa/boot/boot.json" "$OUT/boot-stage1.json"
   log_run bootimg-check python3 "$ROOT/tools/checks/check_bootimg.py" "$OUT/boot-stage1.img" --stage1 --json "$OUT/check-boot-stage1.json"
 }
+export_kernel_env() {
+  export PIPA_OWNER_ANCHOR=${PIPA_OWNER_ANCHOR:-$ROOT/.cache/owner-key/owner.anchor}
+  [ -f "$PIPA_OWNER_ANCHOR" ] || { echo "no owner anchor: run 'python3 tools/owner_key.py init' once (the private key stays in .cache/owner-key)"; exit 2; }
+  eval "$(python3 -c "import tomllib,sys;u=tomllib.load(open(sys.argv[1],'rb'))['userdata'];print(f'export PIPA_UFS_USERDATA_FIRST={u[\"first_lba\"]:#x} PIPA_UFS_USERDATA_LAST={u[\"last_lba\"]:#x}')" "$WORK/UniXNU-pipa/board.toml")"
+}
+use_qemu_observations() {
+  # Live ABI observations from scripts/mac/qemu-abi-observations.sh (never written by hand).
+  local o=${PIPA_QEMU_OBSERVATIONS:-}
+  [ -n "$o" ] || return 0
+  [ -f "$o/observations.json" ] || { echo "PIPA_QEMU_OBSERVATIONS=$o has no observations.json"; exit 2; }
+  python3 "$ROOT/tools/check_observations.py" "$o"
+  mkdir -p "$WORK/UniXNU/out/pipa/tree/build/storage-abi"
+  cp "$o/interface-audit.json" "$WORK/UniXNU/out/pipa/tree/build/storage-abi/interface-audit.json"
+  export PIPA_DISPLAY_REFERENCE=$o/qemu-tree
+}
 step_kernel() {
+  export_kernel_env
+  use_qemu_observations
   : "${UNIXNU_IPSW:?set UNIXNU_IPSW to your local iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw or the official URL}"
   export UNIXNU_IPSW
   case $UNIXNU_IPSW in

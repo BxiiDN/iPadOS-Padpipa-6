@@ -55,6 +55,40 @@ def checkout(name: str, src: dict, work: str, submodules: bool = True) -> None:
                 g.write(f.read())
 
 
+OVERLAYS = os.path.join(ROOT, "overlays")
+
+
+def apply_overlays(work: str) -> list[str]:
+    """This project's changes to the pinned trees, kept as reviewable files: patches applied with git apply (skipped when
+    already applied), scripts copied into the device repository. Returns a log of what was done."""
+    import hashlib
+    import shutil
+    done = []
+    targets = {"UniXNU": os.path.join(work, "UniXNU"), "PipaUfs": os.path.join(work, "UniXNU-pipa", "drivers", "PipaUfs")}
+    for name, path in targets.items():
+        pdir = os.path.join(OVERLAYS, name)
+        if not os.path.isdir(pdir) or not os.path.isdir(path):
+            continue
+        for patch in sorted(f for f in os.listdir(pdir) if f.endswith(".patch")):
+            full = os.path.join(pdir, patch)
+            digest = hashlib.sha256(open(full, "rb").read()).hexdigest()[:16]
+            if subprocess.run(["git", "-C", path, "apply", "--reverse", "--check", full], capture_output=True).returncode == 0:
+                done.append(f"already applied {name}/{patch} {digest}")
+                continue
+            r = subprocess.run(["git", "-C", path, "apply", full], capture_output=True, text=True)
+            if r.returncode:
+                raise SystemExit(f"overlay {name}/{patch} does not apply: {r.stderr.strip()}")
+            done.append(f"applied {name}/{patch} {digest}")
+    sdir = os.path.join(OVERLAYS, "UniXNU-pipa", "scripts")
+    dst = os.path.join(work, "UniXNU-pipa", "scripts")
+    if os.path.isdir(sdir) and os.path.isdir(dst):
+        for f in sorted(os.listdir(sdir)):
+            shutil.copyfile(os.path.join(sdir, f), os.path.join(dst, f))
+            os.chmod(os.path.join(dst, f), 0o755)
+            done.append(f"copied UniXNU-pipa/scripts/{f} {hashlib.sha256(open(os.path.join(sdir, f), 'rb').read()).hexdigest()[:16]}")
+    return done
+
+
 def verify(name: str, src: dict, work: str) -> bool:
     path = os.path.join(work, name)
     try:
@@ -82,6 +116,8 @@ def main(argv: list[str]) -> int:
         return 0 if all(verify(n, lock[n], args.work) for n in names) else 1
     for n in names:
         checkout(n, lock[n], args.work, not args.no_submodules)
+    for line in apply_overlays(args.work):
+        print("   overlay:", line)
     print("bootstrap done; next: scripts/wsl/build.sh board")
     return 0
 

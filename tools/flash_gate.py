@@ -53,7 +53,10 @@ def main(argv: list[str]) -> int:
     if facts["provenance"].get("source") != "measured":
         reasons.append("unit facts are not from the tablet (provenance.source != measured)")
     with open(args.board, encoding="utf-8") as f:
-        res = check_board.check(f.read(), facts)
+        board_text = f.read()
+    res = check_board.check(board_text, facts)
+    if "--ci-test-key" in board_text:
+        reasons.append("board.toml pins a CI TEST key: its kernel and root image must never be written to a tablet")
     reasons += res["errors"]
     if not res["flash_allowed"]:
         reasons.append("board.toml userdata window is not the measured one")

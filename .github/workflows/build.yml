@@ -56,11 +56,16 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Pinned inputs
         run: python3 tools/bootstrap.py --work work --only uefi-pipa,UniXNU-pipa,UniXNU --no-submodules
+      - name: OpenSSL headers (verified root chain test)
+        run: sudo apt-get install -y --no-install-recommends libssl-dev
       - name: Regression tests
         env:
+          PIPA_VERIFIED_ROOT_KIT: work/UniXNU/kits/VerifiedRoot
           PIPA_UEFI: work/uefi-pipa
           PIPA_BOARD: work/UniXNU-pipa/board.toml
-        run: python3 -m unittest discover -s tests -v
+        run: |
+          git -C work/UniXNU submodule update --init --depth 1 kits/VerifiedRoot
+          python3 -m unittest discover -s tests -v
       - name: Upstream pipa driver host tests
         run: |
           set -o pipefail

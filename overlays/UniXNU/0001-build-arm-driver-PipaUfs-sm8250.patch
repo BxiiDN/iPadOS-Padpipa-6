@@ -1,0 +1,49 @@
+diff --git a/scripts/build-arm-driver.py b/scripts/build-arm-driver.py
+index 4dcaa91..3803216 100644
+--- a/scripts/build-arm-driver.py
++++ b/scripts/build-arm-driver.py
+@@ -12,15 +12,32 @@ parser = argparse.ArgumentParser(description=__doc__)
+ catalog = {entry['id']: entry for entry in tomllib.loads((ROOT / 'components.toml').read_text())['component']
+            if entry['kind'] == 'driver' and any(name.endswith('.cpp') for name in entry.get('source_files', []))}
+ aliases = {entry.get('legacy_name', identifier): identifier for identifier, entry in catalog.items()}
++# iPadOS-Padpipa-6 overlay: the pipa fork of ShengUfs (drivers/PipaUfs, xVanTuring/PipaUfs branch pipa) is a board driver
++# UniXNU's catalog does not list. It is built from its own sources with their SM8250 constants (GccUfs.h
++# NATIVE_UFS_SM8250) and this unit's measured userdata window; the legacy runtime name keeps NativeUfs's build flags.
++device_catalog = {}
++if (ROOT / 'drivers/PipaUfs/NativeUfs.cpp').is_file():
++    device_catalog['PipaUfs'] = {'id': 'PipaUfs', 'kind': 'driver', 'source_files': ['NativeUfs.cpp'],
++                                 'outputs': ['build/pipa-ufs/libPipaUfs.a'], 'legacy_name': 'NativeUfs'}
+ auxiliary = ['NativeLegacyDisplay', 'NativeGOPPresenter', 'NativeOfflineGPU', 'NativeOfflineAccelerator', 'NativeIOGPUProviderProbe']
+-parser.add_argument('component', choices=sorted(set(catalog) | set(aliases) | set(auxiliary)))
++parser.add_argument('component', choices=sorted(set(catalog) | set(aliases) | set(auxiliary) | set(device_catalog)))
++parser.add_argument('--sm8250', action='store_true', help='PipaUfs only: compile its SM8250 (kona) GCC, host and SMMU constants')
+ parser.add_argument('--negative-aes-kat', action='store_true', help='Isolated own-source wrong-answer refusal control; never changes original inputs')
+ parser.add_argument('--verified-root', action='store_true', help='Authenticate all actual disk reads against an independently signed immutable policy')
+ parser.add_argument('--verified-root-bundle', action='store_true', help='Select exactly one capacity-matching policy per device, then independently authenticate it')
+ parser.add_argument('--negative-verified-block', action='store_true', help='Negative own-buffer control: corrupt only the completed DMA snapshot')
+ args = parser.parse_args()
+-identifier = aliases.get(args.component, args.component)
+-metadata = catalog.get(identifier, {})
++identifier = args.component if args.component in device_catalog else aliases.get(args.component, args.component)
++metadata = device_catalog.get(identifier) or catalog.get(identifier, {})
++if args.sm8250 != (identifier == 'PipaUfs'):
++    parser.error('--sm8250 selects the SoC of PipaUfs and is required by it; no other component takes it')
++userdata_window = None
++if identifier == 'PipaUfs':
++    import os
++    first, last = os.environ.get('PIPA_UFS_USERDATA_FIRST'), os.environ.get('PIPA_UFS_USERDATA_LAST')
++    if not first or not last or int(first, 0) <= 0 or int(last, 0) <= int(first, 0):
++        parser.error('PipaUfs needs PIPA_UFS_USERDATA_FIRST/LAST (4096-byte LBAs of this unit\'s userdata, from board.toml)')
++    userdata_window = (int(first, 0), int(last, 0))
+ runtime = metadata.get('legacy_name', identifier)
+ args.component = runtime
+ if args.verified_root_bundle and not args.verified_root:
+@@ -87,6 +104,8 @@ if component in ('NativeVirtioBlock', 'NativeRamBlock', 'NativeUfs'):
+         command += ['-DNATIVE_VERIFIED_BLOCK_INJECT_FAULT=1']
+     if args.verified_root_bundle:
+         command += ['-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1']
++if userdata_window:
++    command += ['-DNATIVE_UFS_SM8250=1', f'-DUFS_USERDATA_FIRST={userdata_window[0]:#x}ULL', f'-DUFS_USERDATA_LAST={userdata_window[1]:#x}ULL']
+ if component == 'NativeUfs':
+     command += ['-I', str(ROOT / 'kits/VerifiedRoot/include'), '-I', str(ROOT / 'drivers/VirtioMmioBlock'),
+                 '-DNATIVE_VERIFIED_BLOCK=1', '-DNATIVE_VERIFIED_BLOCK_MULTI_POLICY=1', '-mgeneral-regs-only']

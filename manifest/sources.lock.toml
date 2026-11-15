@@ -150,3 +150,17 @@ commit = "fb4efb37b4ac289ce83ad94c7acb73defb87955c"
 license = "BSD-2-Clause-Patent"
 role = "reference"
 what = "upstream of uefi-pipa; pipaPkg lives here; uefi-pipa is used instead because it carries the UniXNU modules"
+
+[source.UniXNU-qemu]
+url = "https://github.com/xVanTuring/UniXNU-qemu"
+commit = "97b75b1f63c6b7e895cd7646029db741d5fe5488"
+date = "2026-10-21"
+role = "base"
+what = "producers of the live ABI observations: scripts/build-storage-abi.py (interface-audit.json) and scripts/build-display-abi.py (PIPA_DISPLAY_REFERENCE), run by scripts/mac/qemu-abi-observations.sh"
+
+# This project's changes to the pinned trees (tools/bootstrap.py apply_overlays), with their SHA-256.
+[overlay]
+"overlays/UniXNU/0001-build-arm-driver-PipaUfs-sm8250.patch" = "3d5b5745c21bdd03538ab83a164180f0b5e1d17192af74ba4096c094cacfe40b"
+"overlays/PipaUfs/0001-userdata-window-per-unit.patch" = "191d8c3a85a19fc9952a49d61a20c49f574c0907afb8ff8866f1f3e985846e5e"
+"overlays/UniXNU-pipa/scripts/build-verified-root-key.py" = "82d7532621562f70bcdb50a1b56f06cd0281955a4f22c198bd0b14cdb7bf93e7"
+"overlays/UniXNU-pipa/scripts/prepare-storage-abi-headers.py" = "e2f1844381a4f7a1f293971ae55f410ebfdf2614de20b879b29d2405b4347925"

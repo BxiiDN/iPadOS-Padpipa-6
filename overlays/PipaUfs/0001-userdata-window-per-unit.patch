@@ -1,0 +1,23 @@
+diff --git a/GccUfs.h b/GccUfs.h
+index 1a397de..06f6078 100644
+--- a/GccUfs.h
++++ b/GccUfs.h
+@@ -49,9 +49,17 @@
+ // UEFI leaves both streams on context banks with stage 1 off (survey 2026-10-23); NativeUfs keeps that mapping as it is
+ // (SmmuTakeover.h planUfsSmmuFirmware) instead of mapping its own bank.
+ #define UFS_SMMU_FIRMWARE_BYPASS      1
+-// Raw userdata partition of this tablet (sda34 on UFS LUN 0), from its GPT.
++// Raw userdata partition (sda34 on UFS LUN 0), from the GPT. The values below are the 128 GB reference tablet's;
++// iPadOS-Padpipa-6 passes the measured window of each unit (-DUFS_USERDATA_FIRST/LAST from board.toml [userdata]).
++#ifndef UFS_USERDATA_FIRST
+ #define UFS_USERDATA_FIRST            0x293000ULL
++#endif
++#ifndef UFS_USERDATA_LAST
+ #define UFS_USERDATA_LAST             0x1d387faULL
++#endif
++#if UFS_USERDATA_LAST <= UFS_USERDATA_FIRST
++#error "UFS_USERDATA_LAST must be above UFS_USERDATA_FIRST"
++#endif
+ 
+ #define GCC_UFS_PHY_GDSCR             0x77004
+ #define GCC_UFS_PHY_AXI_ENABLE        0x77010

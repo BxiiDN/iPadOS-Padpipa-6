@@ -75,6 +75,15 @@ def load_overlay(path: str | None) -> dict:
     return defaults
 
 
+def with_anchor(overlay: dict) -> dict:
+    """PIPA_OWNER_ANCHOR (or .cache/owner-key/owner.anchor) selects the anchor; PIPA_CI_TEST_KEY=1 marks a CI key."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    overlay = dict(overlay)
+    overlay["owner_anchor"] = os.environ.get("PIPA_OWNER_ANCHOR") or os.path.join(root, ".cache", "owner-key", "owner.anchor")
+    overlay["ci_test_key"] = os.environ.get("PIPA_CI_TEST_KEY") == "1"
+    return overlay
+
+
 def generate(upstream_text: str, facts: dict, overlay: dict) -> tuple[str, dict]:
     report: dict = {"changes": [], "warnings": [], "flash_allowed": False}
     pr = unitfacts.problems(facts, need_storage=False)
@@ -113,6 +122,28 @@ def generate(upstream_text: str, facts: dict, overlay: dict) -> tuple[str, dict]
         text = insert_comment_before(text, "userdata", NOT_FOR_FLASH)
         report["warnings"].extend(st_problems)
 
+    # Kernel archive list: the public storage-ABI header step before PipaUfs, and the owner anchor pin.
+    archives = list(up.get("kernel", {}).get("archives", []))
+    if "prepare-storage-abi-headers.py" not in archives:
+        ufs = next((i for i, a in enumerate(archives) if a.startswith("build-arm-driver.py PipaUfs")), None)
+        if ufs is not None:
+            text = text.replace(f'  "{archives[ufs]}",', f'  "prepare-storage-abi-headers.py",\n  "{archives[ufs]}",', 1)
+            report["changes"].append({"key": "kernel.archives", "old": "-", "new": "+prepare-storage-abi-headers.py before PipaUfs",
+                                      "source": "overlay"})
+    pin_entry = next((a for a in archives if a.startswith("build-verified-root-key.py")), None)
+    anchor = overlay.get("owner_anchor")
+    if pin_entry and anchor and os.path.isfile(anchor):
+        import hashlib
+        digest = hashlib.sha256(open(anchor, "rb").read()).hexdigest()
+        new = f"build-verified-root-key.py --pin {digest}" + (" --ci-test-key" if overlay.get("ci_test_key") else "")
+        text = text.replace(f'"{pin_entry}"', f'"{new}"', 1)
+        report["changes"].append({"key": "kernel.archives verified-root pin", "old": pin_entry.split()[-1][:16],
+                                  "new": digest[:16], "source": "ci-test key" if overlay.get("ci_test_key") else "owner key"})
+        report["owner_anchor_sha256"] = digest
+        report["ci_test_key"] = bool(overlay.get("ci_test_key"))
+    elif pin_entry:
+        report["warnings"].append("no owner anchor (tools/owner_key.py init): the kernel step keeps the reference pin and will refuse")
+
     args = up.get("payload", {}).get("kernel_args", [])
     cmdline = " ".join(args)
     report["kernel_args_bytes"] = len(cmdline.encode())
@@ -136,7 +167,7 @@ def main(argv: list[str]) -> int:
     with open(args.upstream, encoding="utf-8") as f:
         upstream = f.read()
     try:
-        text, report = generate(upstream, unitfacts.load(args.facts), load_overlay(args.overlay))
+        text, report = generate(upstream, unitfacts.load(args.facts), with_anchor(load_overlay(args.overlay)))
     except BoardError as e:
         print(f"pipa_board: {e}", file=sys.stderr)
         return 1
