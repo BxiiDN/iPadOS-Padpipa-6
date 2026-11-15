@@ -1,0 +1,41 @@
+name: pipa checks
+# Static gates and their regression tests against the pinned upstream inputs. CI is build/host evidence only:
+# it never counts as a device test (docs/TESTING.md).
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Pinned uefi-pipa (memory map + DTB) and UniXNU-pipa (board.toml)
+        run: |
+          python3 tools/bootstrap.py --work work --only uefi-pipa
+          python3 - <<'EOF'
+          import subprocess, tomllib
+          src = tomllib.load(open("manifest/sources.lock.toml", "rb"))["source"]["UniXNU-pipa"]
+          subprocess.run(["git", "init", "-q", "work/UniXNU-pipa"], check=True)
+          subprocess.run(["git", "-C", "work/UniXNU-pipa", "fetch", "-q", "--depth", "1", src["url"], src["commit"]], check=True)
+          subprocess.run(["git", "-C", "work/UniXNU-pipa", "checkout", "-q", "FETCH_HEAD"], check=True)
+          EOF
+      - name: Regression tests (34 cases, including the real pipa inputs)
+        env:
+          PIPA_UEFI: work/uefi-pipa
+          PIPA_BOARD: work/UniXNU-pipa/board.toml
+        run: python3 -m unittest discover -s tests -v
+      - name: Board, memory and blob gates
+        run: |
+          python3 tools/unitfacts.py from-dtb work/uefi-pipa/Resources/DTBs/pipa.dtb -o out/unit-facts.stock.json
+          python3 tools/pipa_board.py --upstream work/UniXNU-pipa/board.toml --facts out/unit-facts.stock.json \
+            --overlay device/pipa-8g256/overlay.toml -o out/board.toml --report out/board-report.json
+          python3 tools/checks/check_board.py --board out/board.toml --facts out/unit-facts.stock.json
+          python3 tools/checks/check_memory.py --memmap work/uefi-pipa/Platforms/Xiaomi/pipaPkg/Library/MemoryMapLib/MemoryMapLib.c \
+            --dtb work/uefi-pipa/Resources/DTBs/pipa.dtb --facts out/unit-facts.stock.json --board out/board.toml
+          python3 tools/checks/check_firmware.py --manifest manifest/firmware.toml --scan-repo .
+      - name: The reference board must be refused for an 8 GB unit
+        run: |
+          if python3 tools/checks/check_board.py --board work/UniXNU-pipa/board.toml --facts out/unit-facts.stock.json; then
+            echo "16 GB reference board.toml passed on 8 GB facts"; exit 1; fi
