@@ -16,6 +16,13 @@ for t in TouchBoardTests NativeBatteryTests ButtonsTests GpuPowerBoardTests Gest
   if $cc -std=c11 -Wall -Wextra -Werror -I "$pkg" "$pkg/$t.c" -o "$tmp/$t" && "$tmp/$t"; then echo "PASS  $t"
   else echo "FAIL  $t"; fail=1; fi
 done
+# This project's own driver code (drivers/): board plans with host tests.
+here=$(cd "$(dirname "$0")/../.." && pwd)
+for t in "$here"/drivers/*/*Tests.c; do
+  n=$(basename "$t" .c)
+  if $cc -std=c11 -Wall -Wextra -Werror -I "$(dirname "$t")" "$t" -o "$tmp/$n" && "$tmp/$n"; then echo "PASS  $n"
+  else echo "FAIL  $n"; fail=1; fi
+done
 if [ "$(uname -m)" = aarch64 ] || [ "$(uname -m)" = arm64 ]; then
   # _POSIX_C_SOURCE: glibc hides posix_memalign under strict -std=c11 (macOS, where the test was written, does not).
   if $cc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -I "$kit" -I "$pkg" "$pkg/A650Gmu.c" "$pkg/A650GmuTests.c" \

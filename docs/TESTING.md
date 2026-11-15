@@ -20,8 +20,11 @@ Simulasi, CI, atau klaim upstream tidak pernah menjadi `device-tested`.
 | `check_bootimg.py` | header ≠ v1/page 2048/base, kernel bukan gzip, tanpa DTB terlampir, FD > 3 MiB, ramdisk bukan FAT `PIPAESP`, image terpotong | otomatis sebelum `pipa.ps1 boot` |
 | `check_firmware.py` | digest firmware salah, firmware wajib hilang, blob proprietary/Apple ter-commit | `build.sh kernel`, CI |
 | `check_symbols.py` | simbol undefined di arsip driver yang tidak didefinisikan kernel | `build.sh kernel` |
-| `flash_gate.py` | flash tanpa GPT terukur, image lebih besar dari jendela userdata | otomatis sebelum `flash-userdata` |
-| `tests/test_checks.py` | regresi pada gate itu sendiri (34 kasus, termasuk integrasi dengan data pipa asli) | `python3 -m unittest discover -s tests` |
+| `flash_gate.py` | flash tanpa GPT terukur, sparse image rusak (setiap chunk diperiksa), ukuran ekspansi > jendela atau bukan kelipatan 4096 |
+| `check_ipsw.py` | IPSW versi/build/model lain atau image root yang diubah |
+| `check_inputs.py` | input kernel yang tidak tersedia (builder, komponen, kunci owner, referensi display, firmware) |
+| `PipaLib.Tests.ps1` | serial ambigu/salah, exit code, cache firmware basi, backup palsu, BOM, path dengan spasi | otomatis sebelum `flash-userdata` |
+| `tests/test_checks.py` | regresi pada gate itu sendiri (56 kasus Python, termasuk integrasi dengan data pipa asli; Pester untuk skrip Windows) | `python3 -m unittest discover -s tests` |
 
 ## Protokol ronde di perangkat
 

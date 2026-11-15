@@ -1,0 +1,8 @@
+299c299
+<     offsetof(DXE_PCD_DATABASE, Uninit.PcdTestKeyUsed_a1aff049_fdeb_442a_b320_13ab4cb72bbc) | PCD_TYPE_DATA | PCD_DATUM_TYPE_UINT8_BOOLEAN,
+---
+>     offsetof(DXE_PCD_DATABASE, Uninit.PcdTestKeyUsed_a1aff049_fdeb_442a_b320_13ab4cb72bbc) | PCD_DATUM_TYPE_UINT8_BOOLEAN | PCD_TYPE_DATA,
+321c321
+<    offsetof (DXE_PCD_DATABASE, Uninit.PcdTestKeyUsed_a1aff049_fdeb_442a_b320_13ab4cb72bbc) | PCD_TYPE_DATA | PCD_DATUM_TYPE_UINT8_BOOLEAN, /* */
+---
+>    offsetof (DXE_PCD_DATABASE, Uninit.PcdTestKeyUsed_a1aff049_fdeb_442a_b320_13ab4cb72bbc) | PCD_DATUM_TYPE_UINT8_BOOLEAN | PCD_TYPE_DATA, /* */

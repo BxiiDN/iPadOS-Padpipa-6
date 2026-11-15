@@ -489,10 +489,15 @@ class KernelInputsTests(unittest.TestCase):
             os.makedirs(os.path.join(work, d))
         open(os.path.join(work, "UniXNU/scripts/build-arm-driver.py"), "w").close()
         with open(os.path.join(work, "UniXNU-pipa/board.toml"), "w") as f:
-            f.write('[kernel]\narchives = ["build-arm-driver.py ArmCpu", "build-verified-root-key.py --pin 70a5"]\n')
+            f.write('[kernel]\narchives = ["build-arm-driver.py ArmCpu", "build-arm-driver.py PipaUfs --sm8250", "build-verified-root-key.py --pin 70a5"]\n')
+        with open(os.path.join(work, "UniXNU/components.toml"), "w") as f:
+            f.write('[[component]]\nid = "ShengUfs"\nlegacy_name = "NativeUfs"\n[[component]]\nid = "ArmCpu"\n')
+        with open(os.path.join(work, "UniXNU-pipa/board.toml"), "a") as f:
+            pass
         r = check_inputs.check(work, None)
         self.assertIn("build-verified-root-key.py --pin 70a5", r["missing"])
         self.assertNotIn("build-arm-driver.py ArmCpu", r["missing"])
+        self.assertIn("build-arm-driver.py PipaUfs --sm8250", r["missing"])   # unknown to the public UniXNU
 
 
 @unittest.skipUnless(os.environ.get("PIPA_UEFI"), "set PIPA_UEFI to a uefi-pipa checkout for the integration test")

@@ -2,7 +2,7 @@
 
 Port **iPadOS 17.7.11 asli** (XNU + userland Apple yang tidak dimodifikasi) untuk **Xiaomi Pad 6 (pipa, Snapdragon 870 / SM8250-AC, Adreno 650)** milik sendiri, varian **8 GB RAM / 256 GB**. Dibangun dari Windows 11 lewat WSL2.
 
-> **Status jujur (2026-11-16):** belum ada satu pun ronde di tablet target. UEFI dan boot image tahap 1 sudah **dibangun dan divalidasi** dari checkout bersih. Kernel, payload, dan userdata menunggu toolchain di WSL2, IPSW, dan pengukuran tablet. Rinciannya per area ada di [STATUS.md](STATUS.md).
+> **Status jujur (2026-11-16):** PR #1 masih **open** (belum di-merge). Belum ada ronde di tablet target. UEFI dan `boot-stage1.img` (**hanya menu UniXNU, bukan iPadOS**) sudah dibangun dan divalidasi. XNU ter-compile di runner macOS, tetapi build kernel pipa berhenti di input yang tidak dipublikasikan upstream. Rincian ada di [STATUS.md](STATUS.md); panduan Windows di [docs/WINDOWS.md](docs/WINDOWS.md).
 
 ## Apa isi repo ini
 
@@ -11,7 +11,7 @@ Repo ini **bukan** salinan UniXNU atau HakiOS. Isinya lapisan untuk satu unit fi
 - **Audit dan arsitektur**: [docs/AUDIT.md](docs/AUDIT.md) (HakiOS vs UniXNU, selisih dokumentasi, sumber Xiaomi/LineageOS) dan [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (rantai boot, ARM64/PAC/page, pilihan GPU).
 - **Kunci sumber**: [manifest/sources.lock.toml](manifest/sources.lock.toml) (commit, tanggal, lisensi, peran tiap sumber) dan [manifest/firmware.toml](manifest/firmware.toml) (firmware proprietary, asal, digest).
 - **Konfigurasi pipa per unit**: `device/pipa-8g256/` dan `tools/pipa_board.py`. `board.toml` referensi berasal dari tablet **16 GB (di-upgrade) / 128 GB**, jadi `dram_size`, `owned_memory_size`, dan jendela userdata ditulis ulang dari fakta unit ini.
-- **Gate otomatis**: `tools/checks/`, mendeteksi memory overlap, simbol hilang, firmware salah, board keliru, dan image tidak valid, plus 34 test regresi di `tests/`.
+- **Gate otomatis**: `tools/checks/`, mendeteksi memory overlap, simbol hilang, firmware salah, board keliru, dan image tidak valid, plus 56 test regresi di `tests/` dan test Pester di `tests/windows/`.
 - **Pintu masuk Windows**: `scripts/windows/pipa.ps1` (adb/fastboot di Windows, build di WSL2) dan `scripts/wsl/build.sh`.
 - **Log dan checksum sesi**: `logs/`.
 
@@ -30,7 +30,7 @@ git clone https://github.com/BxiiDN/iPadOS-Padpipa-6; cd iPadOS-Padpipa-6
 # 2. Build yang tidak butuh IPSW/toolchain: UEFI + boot image tahap 1 + semua gate
 .\scripts\windows\pipa.ps1 build all
 
-# 3. Ronde pertama: boot SEMENTARA (tidak menulis apa pun), harus sampai menu UniXNU
+# 3. Ronde pertama: boot SEMENTARA ke RAM; image tahap 1 hanya sampai menu UniXNU (BUKAN iPadOS)
 .\scripts\windows\pipa.ps1 boot out\pipa-8g256\boot-stage1.img
 
 # 4. Kernel + payload (sekali: toolchain, berjam-jam)

@@ -69,3 +69,36 @@ UniXNU mengunci Mesa di `85fda3b3` (`scripts/data/adreno-compiler-inputs.json`, 
 | HakiOS `hakios-metal` | GPU, jalur Metal native | 110–115 fps swipe di Adreno 642L (vs 50–57 Metal-on-Vulkan di HW yang sama) | ABI-nya untuk Metal iOS 16.5; perlu port ke ABI 17.7.11 |
 | HakiOS `drivers/wifi/hakios.wlfw.c` | pertukaran WLFW QMI | stand-in untuk WCN6750 | rujukan urutan pesan ath11k |
 | HakiOS `drivers/audio/hakios.adsp.c` | start ADSP (PAS) | langkah 1 audio di redwood | alamat milik redwood, harus diganti dengan nilai pipa |
+
+## 8. Audit ulang 2026-11-16 (sesi 2)
+
+### Input build kernel yang tidak dipublikasikan
+
+Run macOS CI [`43771439646`](https://github.com/BxiiDN/iPadOS-Padpipa-6/actions/runs/43771439646) (Xcode 26.6, sumber terkunci) membuktikan urutan berikut: XNU **ter-compile**; arsip corecrypto ×2, ArmDTPlatform, ArmCpu, dan SoftwareAES **terbangun**; arsip ke-6 gagal. `tools/check_inputs.py` kini mendeteksi semua penyebabnya sebelum build:
+
+| Input yang diminta `board.toml` / builder UniXNU-pipa `cdb3d627` | Ada di sumber publik? | Bukti |
+|---|---|---|
+| `build-arm-driver.py PipaUfs --sm8250` | **tidak**: `PipaUfs` dan `--sm8250` tidak ada di `components.toml`/`build-arm-driver.py` UniXNU `ae687009` maupun main `f7a263dd` (pilihan yang ada: `ShengUfs`, `NativeUfs`, …) | log CI: `invalid choice: 'PipaUfs'` |
+| `build-verified-root-key.py --pin 70a5…` | **tidak**: tidak ada di UniXNU (`ae687009`, main), UniXNU-pipa, UniXNU-tb128fu `a9c3863d` | `git ls-tree` ketiganya |
+| `build/verified-root-os/trusted-key.bin` (anchor `VROOTKEY` + modulus RSA-3072, 395 byte) | kunci milik owner tb128fu | README UniXNU-pipa, `kits/VerifiedRoot/tools/manifest.py` |
+| `PIPA_DISPLAY_REFERENCE`: tree UniXNU-qemu + `gdb-stop.json` dari run DarwinBoot di **Hypervisor.framework** | butuh Mac Apple silicon dengan HVF; runner GitHub tanpa virtualisasi bersarang | `build-gop-legacy-display.py` baris 35–43 |
+| `build/storage-abi/interface-audit.json` | generator publik ada (`audit-storage-interface.py`), tetapi gagal di tree ini karena file yang diharapkannya tidak ada | log CI `storage-audit` |
+| firmware GPU/touch | ada pengganti publik untuk CI (linux-firmware `20250509`, pipa-mainline `842d35be`), **bukan** salinan dari tablet ini | `scripts/ci/fetch-ci-firmware.sh` |
+
+Kesimpulan: kernel pipa seperti yang dikonfigurasi upstream **tidak bisa direproduksi dari sumber publik**. Ada dua jalan keluar, dan keduanya butuh kerja di luar repo ini: (a) maintainer mempublikasikan UniXNU lokal beserta skripnya; atau (b) port ulang ke komponen publik (`ShengUfs` dengan nilai SM8250 dari fork `PipaUfs`, kunci owner baru milik Abian dari `kits/VerifiedRoot/tools/manifest.py`, dan tree referensi display yang dibangun di Mac sendiri).
+
+### Donor UniXNU-j716f
+
+| | Hasil |
+|---|---|
+| Repo aktif | `Denis0x00/UniXNU-j716f`, HEAD `c91d5cd3` (2026-11-14) |
+| Record UniXNU (`bf2d0f32`, 2026-11-09) | README saat itu: Wi-Fi & BT "Device-verified" (MHI Mission Mode, BLE) |
+| **HEAD sekarang** | ditulis ulang: README menyatakan bring-up berhenti sebelum root lookup dan **tidak** membuktikan UFS, root, SpringBoard, touch, atau grafis. File Wi-Fi/BT (`WifiProbe.cpp`, `MhiBoot.c`, `BluetoothProbe.cpp`, …) **tidak ada lagi** di HEAD |
+| Chipset/transport | QCA6390, PCIe0 (PARF `0x1c00000`, PHY `0x1c06000`, DBI `0x60000000`) + BT GENI UART QUPv3_0 SE6 |
+| Pin di kode donor `bf2d0f32` | WLAN_EN 20, PERST# 79, CLKREQ 80, SW_CTRL 124, BT_EN 21, UART 16–19. Komentar header menyebut GPIO 80/81/82/94 dan `gcc-sm8550.c`: **basi**, bekas SM8550 (sheng) |
+| Pin pipa (DTB stok) | WLAN_EN **20**, BT_EN **21**, SW_CTRL **124**, PERST# **79**, WAKE **81**, HS UART aktif `0x998000` (SE6): **sama** dengan konstanta donor |
+| Keputusan | donor hanya dari `bf2d0f32` (dikunci); klaim device-verified donor dicatat sebagai klaim maintainer yang kemudian ditarik dari README HEAD. Firmware dan BDF wajib dari tablet ini |
+
+### Varian panel
+
+pipa-mainline (`842d35be`) membawa dua firmware touch, `nt36532_tianma.bin` dan `nt36532_csot.bin`. Driver backlight Xiaomi memilih arus LED penuh berdasarkan GPIO panel-id 30: CSOT `0xb1` (22,8 mA) atau BOE `0xc1` (24,4 mA). Unit referensi memakai touch `_tm`. **Varian panel unit ini harus diukur** sebelum memilih firmware touch.

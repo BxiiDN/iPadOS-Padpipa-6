@@ -53,11 +53,23 @@ def check(work: str, tree: str | None, board_path: str | None = None) -> dict:
     bases = [os.path.join(work, "UniXNU"), os.path.join(work, "UniXNU-pipa")]
     if tree:
         bases.insert(0, tree)
+    # build-arm-driver.py only accepts components of UniXNU's components.toml (ids, legacy names, aliases).
+    known: set[str] = set()
+    comp = os.path.join(work, "UniXNU", "components.toml")
+    if os.path.isfile(comp):
+        with open(comp, "rb") as f:
+            for c in tomllib.load(f).get("component", []):
+                known |= {c.get("id", ""), c.get("legacy_name", "")} | set(c.get("aliases", []))
     archives = []
     for entry in board.get("kernel", {}).get("archives", []):
-        script = shlex.split(entry)[0]
+        argv = shlex.split(entry)
+        script = argv[0]
         found = resolve(script, bases)
-        archives.append({"builder": entry, "script": script, "found": found})
+        rec = {"builder": entry, "script": script, "found": found}
+        if found and script == "build-arm-driver.py" and known and len(argv) > 1 and argv[1] not in known:
+            rec["found"] = None
+            rec["why"] = f"component {argv[1]!r} is not in UniXNU components.toml"
+        archives.append(rec)
     ref = os.environ.get("PIPA_DISPLAY_REFERENCE", "")
     external = []
     for rel, why, kind in EXTERNAL:
@@ -82,7 +94,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
     res = check(args.work, args.tree, args.board)
     for a in res["archives"]:
-        print(f"{'ok     ' if a['found'] else 'MISSING'}  builder {a['builder']}")
+        print(f"{'ok     ' if a['found'] else 'MISSING'}  builder {a['builder']}{'  (' + a['why'] + ')' if a.get('why') else ''}")
     for e in res["external"]:
         print(f"{'ok     ' if e['present'] else 'MISSING'}  [{e['kind']}] {e['input']}  ({e['why']})")
     if args.json:
