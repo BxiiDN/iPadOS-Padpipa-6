@@ -1,0 +1,23 @@
+iPadOS-Padpipa-6
+
+This repository holds tooling (MIT, see LICENSE), per-unit configuration and documentation. It does not contain, and its
+checks refuse, any Apple software, IPSW content, or proprietary firmware.
+
+It builds from these projects, checked out at the commits pinned in manifest/sources.lock.toml, under their own licenses:
+
+  UniXNU (BSD-2-Clause-Patent)               https://github.com/UniXNU/UniXNU
+  UniXNU-pipa, xVanTuring (BSD-2-Clause-Patent; ShengPlatformPower.cpp MIT)
+                                             https://github.com/xVanTuring/UniXNU-pipa
+  uefi-pipa / Mu-Silicium (BSD-2-Clause-Patent; Binaries: proprietary vendor UEFI drivers)
+                                             https://github.com/xVanTuring/uefi-pipa
+  XNU, libpthread, corecrypto sources (APSL-2.0 and Apple's terms)
+                                             https://github.com/apple-oss-distributions
+  Mesa (MIT)                                 https://gitlab.freedesktop.org/mesa/mesa
+
+Consulted as references or donors (nothing copied unless a file header says so, with attribution):
+  HakiOS (APSL-2.0 + MIT), MiCode Xiaomi_Kernel_OpenSource pipa-t-oss (GPL-2.0), LineageOS device and kernel trees
+  (Apache-2.0 / GPL-2.0), UniXNU-j716f.
+
+iPadOS is Apple's. The owner downloads the IPSW from Apple and uses it on their own device; this project does not
+redistribute it, and Apple's services (activation, Apple ID, iCloud, App Store) are not a goal. This is an independent
+research project, not affiliated with or endorsed by Apple, Xiaomi or Qualcomm.

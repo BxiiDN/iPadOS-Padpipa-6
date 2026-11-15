@@ -1,0 +1,104 @@
+# Proprietary firmware this port needs. NONE of these files is in Git (tools/checks/check_firmware.py --scan-repo fails if
+# one is committed). They live in .cache/firmware/<cache_path> on the build host, copied from the owner's own tablet
+# (scripts/device/collect-firmware.sh, read-only over adb) or from linux-firmware where the file ships there.
+#
+# sha256 = "UNMEASURED" until the owner's copy is hashed and the source confirmed. Digests recorded for OTHER devices are
+# kept in `reference_sha256` only as a hint and are never accepted for pipa (an OEM-signed image differs per OEM).
+#
+# stages: which build step needs the file (check_firmware.py --stage <name>).
+
+schema = 1
+
+[[firmware]]
+name = "a650_gmu.bin"
+cache_path = "gpu/a650_gmu.bin"
+origin = "pipa vendor partition /vendor/firmware/a650_gmu.bin (UniXNU-pipa README: dump.erofs ... --path=/firmware/a650_gmu.bin super.img)"
+license = "proprietary (Qualcomm); redistribution not granted by this project"
+stages = ["gpu"]
+required = true
+sha256 = "UNMEASURED"
+reference_sha256 = { "TB-J716F (Lenovo, SM8250)" = "df79fa8482fcc7587bb239b9c9e2b24bce4729893b990fe3f82b30da8175b01c" }
+consumer = "UniXNU-pipa package/A650Gmu.c (GMU cold start), scripts/build-gop-legacy-display.py PIPA_GMU_FIRMWARE"
+
+[[firmware]]
+name = "a650_sqe.fw"
+cache_path = "linux-firmware/a650_sqe.fw"
+origin = "linux-firmware qcom/a650_sqe.fw (git.kernel.org), version 0x112; the vendor partition's 0x093 is refused by Linux (< 0x095)"
+license = "linux-firmware LICENSE.qcom (redistributable as part of linux-firmware)"
+stages = ["gpu"]
+required = true
+sha256 = "UNMEASURED"
+consumer = "UniXNU-pipa scripts/build-gop-legacy-display.py PIPA_SQE_FIRMWARE"
+
+[[firmware]]
+name = "a650_zap.elf"
+cache_path = "gpu/a650_zap.elf"
+origin = "pipa vendor partition /vendor/firmware/a650_zap.elf (Xiaomi-signed, loaded through TrustZone PAS 13)"
+license = "proprietary (Qualcomm/Xiaomi); OEM-signed, device specific"
+stages = ["gpu"]
+required = true
+sha256 = "UNMEASURED"
+reference_sha256 = { "TB-J716F (Lenovo-signed, NOT usable on pipa)" = "45863d11e234032c135d18edc5b2361795060a29217c4716ab634cc5440da759" }
+consumer = "UniXNU-pipa package/GpuProbe.cpp mode 10"
+
+[[firmware]]
+name = "novatek_nt36532_m82_fw_tm.bin"
+cache_path = "touch/novatek_nt36532_m82_fw_tm.bin"
+origin = "stock pipa kernel's built-in firmware table (panel maker 0x36 pairs with the _tm image). A unit with another panel maker needs the matching image: check unit-facts panel name first"
+license = "proprietary (Novatek/Xiaomi)"
+stages = ["touch"]
+required = true
+sha256 = "UNMEASURED"
+consumer = "UniXNU-pipa package/TouchProbe.cpp stage 4 (firmware download)"
+
+# --- not used by the first image; listed so the network/audio work starts from known inputs -------------------------
+
+[[firmware]]
+name = "amss.bin"
+cache_path = "wifi/amss.bin"
+origin = "pipa vendor /vendor/firmware/ (QCA6390 WLAN firmware) or linux-firmware ath11k/QCA6390/hw2.0/amss.bin"
+license = "proprietary (Qualcomm)"
+stages = ["wifi"]
+required = false
+sha256 = "UNMEASURED"
+consumer = "planned: QCA6390 over PCIe0 (MHI), donor UniXNU-j716f Ath12kWifi"
+
+[[firmware]]
+name = "m3.bin"
+cache_path = "wifi/m3.bin"
+origin = "pipa vendor /vendor/firmware/ or linux-firmware ath11k/QCA6390/hw2.0/m3.bin"
+license = "proprietary (Qualcomm)"
+stages = ["wifi"]
+required = false
+sha256 = "UNMEASURED"
+consumer = "planned: QCA6390"
+
+[[firmware]]
+name = "bdwlan.bin"
+cache_path = "wifi/bdwlan.bin"
+origin = "pipa vendor /vendor/firmware/ board data (calibration for THIS board; never take another device's)"
+license = "proprietary (Qualcomm/Xiaomi), board specific"
+stages = ["wifi"]
+required = false
+sha256 = "UNMEASURED"
+consumer = "planned: QCA6390 WLFW BDF download"
+
+[[firmware]]
+name = "adsp.mdt"
+cache_path = "audio/adsp.mdt"
+origin = "pipa modem/adsp firmware partition (OEM-signed PAS image, with adsp.bNN segments)"
+license = "proprietary (Qualcomm/Xiaomi), OEM-signed"
+stages = ["audio"]
+required = false
+sha256 = "UNMEASURED"
+consumer = "planned: ADSP PAS + four AW882xx smart PAs (I2C 0x34..0x37)"
+
+[[firmware]]
+name = "aw882xx_acf.bin"
+cache_path = "audio/aw882xx_acf.bin"
+origin = "pipa /vendor/firmware/aw882xx_acf.bin (LineageOS android_device_xiaomi_pipa proprietary-files.txt lists it)"
+license = "proprietary (Awinic/Xiaomi)"
+stages = ["audio"]
+required = false
+sha256 = "UNMEASURED"
+consumer = "planned: AW882xx speaker amplifier configuration"
