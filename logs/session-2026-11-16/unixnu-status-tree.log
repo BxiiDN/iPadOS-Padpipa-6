@@ -1,0 +1,49 @@
+unixnu: on Linux the kernel step uses the toolchain of scripts/linux/setup-toolchain.py; --skip-setup and seed-data-grow need macOS hdiutil
+== configuration pipa_defconfig -> /home/claude/src/UniXNU/out/pipa/.config
+defconfig exit=0
+unixnu: on Linux the kernel step uses the toolchain of scripts/linux/setup-toolchain.py; --skip-setup and seed-data-grow need macOS hdiutil
+device   /home/claude/src/work/UniXNU-pipa (pipa)
+output   /home/claude/src/UniXNU/out/pipa
+config   /home/claude/src/UniXNU/out/pipa/.config
+driver   Adreno650                device
+driver   Adreno740                base
+driver   AdrenoMetal              device
+driver   AppleKeyStoreState       base
+driver   ArmCpu                   device
+driver   ArmDTPlatform            base
+driver   ArmVirtPlatform          base
+driver   DarwinBoot               base
+driver   GopFramebuffer           device
+driver   PipaNovatekTouch         device
+driver   PipaUfs                  device
+driver   QcomGeniSpi              base
+driver   RamBlock                 base
+driver   ShengHidInput            device
+driver   SoftwareAES              base
+driver   VirtioMmioBlock          base
+driver   VirtioMmioConsole        base
+kit      AdrenoFirmware           base
+kit      AdrenoPM4                base
+kit      AirNir                   base
+kit      ArmSmmu4K                device
+kit      VerifiedRoot             base
+kit      XnuPrelink               base
+package  device                   device
+package  main                     base
+patch    libpthread               base
+patch    mesa                     base
+patch    xnu                      base
+refer    AvailabilityVersions     git pinned 933f9360f1b7
+refer    IOStorageFamily          git pinned e45fbe30a787
+refer    corecrypto-2023          git pinned 11fba65b12d8
+refer    edk2                     git pinned cfb93724a06f
+refer    libdispatch              git pinned 30fe6a7d9453
+refer    libplatform              git pinned a00a4cc36da2
+refer    libpthread               git pinned c0e60fb5ecfc
+refer    xnu                      git pinned d8b80295118e
+status exit=0
+unixnu: on Linux the kernel step uses the toolchain of scripts/linux/setup-toolchain.py; --skip-setup and seed-data-grow need macOS hdiutil
+== submodules /home/claude/src/UniXNU
+== submodules /home/claude/src/work/UniXNU-pipa
+== tree /home/claude/src/UniXNU/out/pipa/tree
+tree exit=0

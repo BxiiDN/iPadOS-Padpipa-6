@@ -1,0 +1,28 @@
+ok       builder build-corecrypto-14.py
+ok       builder build-corecrypto-14.py --namespace
+ok       builder build-arm-driver.py ArmDTPlatform
+ok       builder build-arm-driver.py ArmCpu
+ok       builder build-arm-driver.py SoftwareAES
+MISSING  builder build-arm-driver.py PipaUfs --sm8250  (component 'PipaUfs' is not in UniXNU components.toml)
+ok       builder build-arm-driver.py VirtioMmioBlock --verified-root
+ok       builder build-virtio-mmio-bindings.py --component VirtioMmioBlock --directory build/virtio-mmio-block-verified
+ok       builder build-arm-driver.py RamBlock
+ok       builder build-virtio-mmio-bindings.py --component RamBlock --directory build/ram-block
+ok       builder build-software-aes-bindings.py
+ok       builder build-libpthread-kernel.py
+ok       builder build-link-stubs.py
+ok       builder build-platform-power.py
+MISSING  builder build-verified-root-key.py --pin 70a5ea346d2d779a7ef43eb4ed8b17f54488e160d8c2a6d6420969664e3ae798
+ok       builder build-adreno650.py
+ok       builder build-adreno740-accelerator.py --component Adreno650
+ok       builder build-gop-legacy-display.py
+MISSING  [generate] build/storage-abi/interface-audit.json  (README: copied from out/tb128fu/tree. Public generator: scripts/audit-storage-interface.py (needs refer/IOStorageFamily))
+MISSING  [owner] build/verified-root-os/trusted-key.bin  (the 395-byte VROOTKEY anchor of the owner RSA-3072 key; README: from out/tb128fu/tree (another owner's key))
+MISSING  [create] build/xnu/ios-obj/EXPORT_HDRS/libsa  (README: an empty directory)
+MISSING  [reference] <PIPA_DISPLAY_REFERENCE>/build/xnu-prelink/native-owner-mobile-graphics-candidate.macho  (build-gop-legacy-display.py: UniXNU-qemu's built tree)
+MISSING  [reference] <PIPA_DISPLAY_REFERENCE>/build/darwinboot-owner-hvf-mobile-graphics-legacy-class/gdb-stop.json  (build-gop-legacy-display.py: a DarwinBoot run under macOS Hypervisor.framework (needs an Apple-silicon Mac with HVF))
+MISSING  [firmware] .cache/firmware/gpu/a650_gmu.bin  (manifest/firmware.toml)
+MISSING  [firmware] .cache/firmware/gpu/a650_zap.elf  (manifest/firmware.toml)
+MISSING  [firmware] .cache/firmware/linux-firmware/a650_sqe.fw  (manifest/firmware.toml)
+MISSING  [firmware] .cache/firmware/touch/novatek_nt36532_m82_fw_tm.bin  (manifest/firmware.toml)
+FAIL  kernel inputs: 11 missing

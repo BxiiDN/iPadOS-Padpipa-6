@@ -1,0 +1,166 @@
+# Every source this project builds from or consults, pinned to one commit. scripts/wsl/bootstrap.sh checks these out;
+# docs/AUDIT.md explains each choice. Audited on 2026-11-16.
+#
+# role: base      built into the image
+#       donor     code or values adapted from it (with attribution), not built as-is
+#       reference consulted to verify hardware facts; nothing copied
+#       rejected  evaluated and not used (reason given)
+
+schema = 1
+
+# ---------------------------------------------------------------------------------------------------------------- base
+[source.UniXNU]
+url = "https://github.com/UniXNU/UniXNU"
+commit = "ae687009348296e97e49ce6e925795044f363ce6"   # 2026-10-26T04:13Z, the last commit before UniXNU-pipa's HEAD
+date = "2026-10-26"
+license = "BSD-2-Clause-Patent"
+role = "base"
+what = "unixnu build driver, generic drivers/kits (DarwinBoot, ArmDTPlatform, XnuPrelink, VerifiedRoot, AdrenoFirmware...), XNU/libpthread/Mesa patch series"
+note = "main moved to f7a263dd (2026-11-16); try it only after a round passes on the pinned commit"
+
+[source.UniXNU-pipa]
+url = "https://github.com/xVanTuring/UniXNU-pipa"
+branch = "main"
+commit = "cdb3d62771e31d48d832853ee0c90964346d78da"
+date = "2026-10-26"
+license = "BSD-2-Clause-Patent (ShengPlatformPower.cpp MIT)"
+role = "base"
+what = "pipa device repository: board.toml, pipa_defconfig, package/ (touch, keys, battery, GPU probe, ramoops log), pipa driver forks"
+note = "reference tablet is a 16 GB (upgraded) / 128 GB unit; tools/pipa_board.py rewrites the per-unit values"
+
+[source.uefi-pipa]
+url = "https://github.com/xVanTuring/uefi-pipa"
+branch = "pipa"
+commit = "1f6a1520f84c699a6f748e7b0b0ee72b79c7997b"
+date = "2026-10-22"
+license = "BSD-2-Clause-Patent (Mu-Silicium); Binaries submodule: proprietary vendor UEFI drivers"
+role = "base"
+what = "Mu-Silicium pipaPkg + UniXNU, UniXNUDxe, ShengBootMemoryDxe, DarwinBoot"
+
+[source.uefi-pipa.submodules]
+Binaries = "a1501e0c2e642d6ac0d8f52c85af2a67b75a7799"
+"Common/Mu" = "b8d46c71610318e36a661819e1e3c0b8bdda413a"
+"Common/Mu_OEM_Sample" = "b70b4b7bb02c43bf9db2172dfb3ed0457e2361d6"
+Silicium-ACPI = "2d465ad77c25de908f0ec7bdfcb57f865b61233c"
+"Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl" = "67b5686b4419b4cb8caa502711c41815f5279751"
+
+[source.UniXNU-pipa.drivers]   # gitlinks of UniXNU-pipa cdb3d627 (branch pipa of each fork)
+"drivers/Adreno650" = "01db67e0620fe0e70ab8cbce533cbdb1369f5922"
+"drivers/AdrenoMetal" = "2ff4be9eabd2b1c1078f2d88e75e84d3d589a465"
+"drivers/ArmCpu" = "a9c4585dbb1b75b8594dd0ae54962cc59969d98f"
+"drivers/GopFramebuffer" = "14c7dffb09703e5749bb89af2fdd33ebaf8aa659"
+"drivers/PipaNovatekTouch" = "0025115b7125b53e582f7c6934bb27610d001647"
+"drivers/PipaUfs" = "5c64c0125e0d1855729a2d0095c03514b9cc7030"
+"drivers/ShengHidInput" = "5f3a37cec0c3fc4234b10726b25489a55f0d77ef"
+"kits/ArmSmmu4K" = "6d4441db4b850cfd5a265a5bec59ac629a8f78cd"
+
+[source.xnu]
+url = "https://github.com/apple-oss-distributions/xnu"
+commit = "d8b80295118ef25ac3a784134bcf95cd8e88109f"   # tag xnu-10063.141.1 (pinned by UniXNU-pipa unixnu.lock)
+license = "APSL-2.0"
+role = "base"
+
+[source.mesa]
+url = "https://gitlab.freedesktop.org/mesa/mesa"
+commit = "85fda3b36405bcaea8bffc64aa4f2651dc90770d"   # UniXNU scripts/data/adreno-compiler-inputs.json
+license = "MIT"
+role = "base"
+what = "Turnip (freedreno Vulkan) + ir3 under the AdrenoMetal Metal-on-Vulkan plugin, with UniXNU patches/mesa"
+
+[source.ipados]
+what = "iPadOS 17.7.11 (21H461) for iPad7,1 (j120ap, A10X, arm64 without PAC)"
+url = "https://updates.cdn-apple.com/2025SpringFCS/fullrestores/122-77166/DCA6CFE8-90E9-4B92-880D-3DE171798E40/iPad_Pro_HFR_17.7.11_21H461_Restore.ipsw"
+license = "Apple software license; downloaded by the owner from Apple's CDN, never redistributed by this project"
+role = "base"
+sha256_pins = "UniXNU-pipa board.toml [ipsw.sha256] (OS and SystemOS disk images)"
+
+# -------------------------------------------------------------------------------------------------------------- donors
+[source.UniXNU-j716f]
+url = "https://github.com/Denis0x00/UniXNU-j716f"
+commit = "bf2d0f32f706adbe414551e452f1426ed7c4bd19"   # UniXNU devices.toml record
+license = "see repository"
+role = "donor"
+what = "Lenovo TB-J716F: same SM8250 and QCA6390. Device-verified: MHI Mission Mode, Bluetooth UART6 + bluetoothd. Not yet: 802.11 association"
+
+[source.hakios]
+url = "https://github.com/oosexgang/hakios-xnu-kernel"   # 'hakios-os' is announced but does not exist yet (git ls-remote: not found)
+commit = "63fc2b4633bac3af8e57dadab9f5a8d4cb940438"
+date = "2026-11-06"
+license = "APSL-2.0 (XNU patch) + MIT"
+role = "donor"
+what = "hakios-metal (native Metal command model, 110-115 fps swipes on Adreno 642L vs 50-57 for Metal-on-Vulkan), drivers/wifi/hakios.wlfw.c (WLFW QMI exchange), drivers/audio/hakios.adsp.c (ADSP PAS)"
+rejected_as_base = "XNU xnu-8796.121.2 + iOS 16.5 iPhone X userland, devices redwood (SC7280) and qemu only: no SM8250, no iPadOS, ABI incompatible with the 17.7.11 kernelcache"
+
+[source.hakios-uefi]
+url = "https://github.com/oosexgang/hakios-uefi"
+commit = "687fa6c6a5a70f43184de92980e0a76eea5f2c4b"
+license = "BSD-2-Clause-Patent"
+role = "rejected"
+reason = "an overlay (branding, boot path) for Mu-Silicium aimed at the HakiOS loader; uefi-pipa already carries pipaPkg + DarwinBoot. Stacking both firmwares would conflict"
+
+[source.hackios-xnu-userland]
+url = "https://github.com/oosexgang/hackios-xnu-userland"
+commit = "2573c4a8d80ed143e534d16b5a386efa5b06ccbb"
+role = "rejected"
+reason = "pointer only: 'Moved into the main HakiOS repository' (userland/ of hakios-xnu-kernel)"
+
+[source.BxiiDN-UniXNU-pipa]
+url = "https://github.com/BxiiDN/UniXNU-pipa"
+branch = "pipa"
+commit = "55fa7da3f9aa1accb43a3959e372b4f641857a1e"
+role = "reference"
+what = "the owner's earlier fork (TB-J716F tree converted to pipa, never booted). Its check-pipa-board.py idea (fail on 8 GB / 256 GB until measured) is kept; its firmware digests are TB-J716F's and are not used"
+
+# ----------------------------------------------------------------------------------------------------------- reference
+[source.MiCode-pipa]
+url = "https://github.com/MiCode/Xiaomi_Kernel_OpenSource"
+branch = "pipa-t-oss"
+commit = "77dc8e2290f3f5f15861821564f68d30ea193449"
+date = "2023-05-16"
+license = "GPL-2.0"
+role = "reference"
+what = "pipa_user_defconfig: CONFIG_QPNP_FG_GEN4_PIPA=y (PM8150B gauge; bq27z561 dual gauge NOT set), CONFIG_CNSS_QCA6390=y, BACKLIGHT_KTZ8866=y, FSA4480; pipa-specific fg-gen4/smb5/bq2597x drivers"
+
+[source.lineage-device-pipa]
+url = "https://github.com/LineageOS/android_device_xiaomi_pipa"
+branch = "lineage-23.2"
+commit = "52ec8f2cf1c6e577df324b45625ad044cf50f874"
+license = "Apache-2.0"
+role = "reference"
+what = "proprietary-files.txt (aw882xx_acf.bin, ADSP modules), audio/, peripheralmanager/"
+
+[source.lineage-sm8250-common]
+url = "https://github.com/LineageOS/android_device_xiaomi_sm8250-common"
+branch = "lineage-24.0"
+commit = "69f7d5f8acb220d6ce37ac64489577ae7375acea"
+license = "Apache-2.0"
+role = "reference"
+
+[source.lineage-kernel-sm8250]
+url = "https://github.com/LineageOS/android_kernel_xiaomi_sm8250"
+branch = "lineage-24.0"
+commit = "6b34d24765327d746074c8e53b5ad0d24a51acc7"
+license = "GPL-2.0"
+role = "reference"
+note = "not cloned in the 2026-11-16 audit (MiCode answered the questions that mattered); pinned for the audio/Wi-Fi work"
+
+[source.Mu-Silicium]
+url = "https://github.com/Project-Silicium/Mu-Silicium"
+commit = "fb4efb37b4ac289ce83ad94c7acb73defb87955c"
+license = "BSD-2-Clause-Patent"
+role = "reference"
+what = "upstream of uefi-pipa; pipaPkg lives here; uefi-pipa is used instead because it carries the UniXNU modules"
+
+[source.UniXNU-qemu]
+url = "https://github.com/xVanTuring/UniXNU-qemu"
+commit = "97b75b1f63c6b7e895cd7646029db741d5fe5488"
+date = "2026-10-21"
+role = "base"
+what = "producers of the live ABI observations: scripts/build-storage-abi.py (interface-audit.json) and scripts/build-display-abi.py (PIPA_DISPLAY_REFERENCE), run by scripts/mac/qemu-abi-observations.sh"
+
+# This project's changes to the pinned trees (tools/bootstrap.py apply_overlays), with their SHA-256.
+[overlay]
+"overlays/UniXNU/0001-build-arm-driver-PipaUfs-sm8250.patch" = "3d5b5745c21bdd03538ab83a164180f0b5e1d17192af74ba4096c094cacfe40b"
+"overlays/PipaUfs/0001-userdata-window-per-unit.patch" = "191d8c3a85a19fc9952a49d61a20c49f574c0907afb8ff8866f1f3e985846e5e"
+"overlays/UniXNU-pipa/scripts/build-verified-root-key.py" = "82d7532621562f70bcdb50a1b56f06cd0281955a4f22c198bd0b14cdb7bf93e7"
+"overlays/UniXNU-pipa/scripts/prepare-storage-abi-headers.py" = "e2f1844381a4f7a1f293971ae55f410ebfdf2614de20b879b29d2405b4347925"

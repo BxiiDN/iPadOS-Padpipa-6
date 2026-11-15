@@ -1,0 +1,4 @@
+# python3 /home/claude/ipados-padpipa-6/tools/checks/check_bootimg.py /home/claude/ipados-padpipa-6/out/pipa-8g256/boot-stage1.img --stage1 --json /home/claude/ipados-padpipa-6/out/pipa-8g256/check-boot-stage1.json
+# host: Linux vm 6.18.44-fc-v470 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux
+WARN  empty ramdisk: stage-1 image (UEFI and the UniXNU menu only, no payload)
+PASS  bootimg /home/claude/ipados-padpipa-6/out/pipa-8g256/boot-stage1.img sha256=b85bf42b1a3664cdefc5ff73b3c7220aad5599274952f1a66919e3df29b48253

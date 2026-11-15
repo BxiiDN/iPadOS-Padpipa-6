@@ -1,0 +1,15 @@
+unixnu: on Linux the kernel step uses the toolchain of scripts/linux/setup-toolchain.py; --skip-setup and seed-data-grow need macOS hdiutil
+== submodules /home/claude/src/UniXNU
+== submodules /home/claude/src/work/UniXNU-pipa
+== tree /home/claude/src/UniXNU/out/pipa/tree
+== firmware: uefi-pipa
+== firmware: initializing submodules of the Mu-Silicium checkout
++ git -C /home/claude/src/uefi-pipa submodule update --init --depth 1 -- Binaries Common/Mu Common/Mu_OEM_Sample Silicium-ACPI Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl
++ python3 /home/claude/src/UniXNU/out/pipa/tree/scripts/check-pipa.py
+== firmware: building BaseTools
++ make -C /home/claude/src/UniXNU/out/feeds/mu_basecore-89034cbb/BaseTools/Source/C -j2
++ git -C /home/claude/src/UniXNU/out/feeds/mu_basecore-89034cbb apply --check /home/claude/src/uefi-pipa/Resources/MuPatches/Gic-Spurious.patch
++ git -C /home/claude/src/UniXNU/out/feeds/mu_basecore-89034cbb apply /home/claude/src/uefi-pipa/Resources/MuPatches/Gic-Spurious.patch
++ build -p Platforms/Xiaomi/pipaPkg/pipa.dsc -a AARCH64 -b DEBUG -t CLANGPDB -n 2 -D FD_BASE=0x9fc00000 -D FD_SIZE=0x300000 -D FD_BLOCKS=768 -D ENABLE_SECUREBOOT=1 -D MEMORY_PROTECTION=TRUE -D SHIP_MODE=FALSE -D BUILDID_STRING=pipa-research
+== firmware: /home/claude/src/uefi-pipa/Build/pipaPkg/DEBUG_CLANGPDB/FV/SILICIUM_UEFI.fd
+exit=0

@@ -1,0 +1,14 @@
+# Per-unit choices for the owner's Xiaomi Pad 6 (8 GB RAM / 256 GB UFS). Read by tools/pipa_board.py.
+# Measured facts (memory banks, GPT) are NOT written here: they come from unit-facts.json (pipa.ps1 collect).
+
+[board]
+# How much memory DarwinBoot hands XNU (one contiguous range; [payload.adt] owned_memory_size upstream).
+#
+# Reference unit (16 GB): 4 GiB landed at 0x10007c000, 5.75 GiB from 0xffc20000 (UniXNU-pipa board.toml).
+# On 8 GB the second bank ends at 0x280000000, so the run from 0xffc20000 is 0x1803e0000 (6.0 GiB) before the firmware's
+# own allocations at the top of the bank. tools/checks/check_memory.py predicts only ~4 MiB headroom for 5.75 GiB
+# (assuming 256 MiB of firmware allocations) and 1.8 GiB for 4 GiB.
+#
+# Start at 4 GiB (the iPad7,1's own RAM size), read the UEFI memory map from the first round's log, then step up.
+owned_memory_size = "0x100000000"
+title = "iPadOS-Padpipa-6: Xiaomi Pad 6 8 GB / 256 GB"
