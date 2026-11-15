@@ -127,6 +127,9 @@ def check(blob: bytes, volume: str, max_ramdisk: int, allow_empty_ramdisk: bool 
             shim = fvh - 40 if fvh >= 40 else 0
             info["shim_bytes"] = shim
             info["fd_bytes"] = len(fd) - shim
+            # Content identity independent of the compressor (zlib vs zlib-ng give different deflate streams).
+            info["fd_sha256"] = hashlib.sha256(fd[shim:]).hexdigest()
+            info["appended_dtb_sha256"] = hashlib.sha256(tail).hexdigest()
             if fvh < 40:
                 errors.append("no EFI firmware volume (_FVH) in the decompressed kernel")
             elif shim > 0x1000:
@@ -178,7 +181,8 @@ def main(argv: list[str]) -> int:
         print(f"WARN  {w}")
     for e in res["errors"]:
         print(f"FAIL  {e}")
-    print(f"{'FAIL' if res['errors'] else 'PASS'}  bootimg {args.image} sha256={res['info'].get('sha256', '?')}")
+    print(f"{'FAIL' if res['errors'] else 'PASS'}  bootimg {args.image} sha256={res['info'].get('sha256', '?')} "
+          f"fd_sha256={res['info'].get('fd_sha256', '?')}")
     return 1 if res["errors"] else 0
 
 

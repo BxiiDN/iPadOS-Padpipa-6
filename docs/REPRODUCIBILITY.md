@@ -40,3 +40,15 @@ cat /tmp/fwcheck/report/fd-sha256.txt
 ```
 
 Job `firmware` di CI menjalankan perintah yang sama dan gagal jika A ≠ B.
+
+## Hasil lintas mesin (2026-11-16)
+
+| Build | Mesin | FD A = B (`/tmp/pipa-fw/work`) | FD C (`/tmp/pipa-fw-alt/work`) | `boot-stage1.img` |
+|---|---|---|---|---|
+| lokal | sandbox Ubuntu 24.04, clang 18.1.3, Python 3.13 + **zlib-ng 1.3.1** | `8313aa34e68a151b…` | `3e2ccbf4983288da…` | `157b3b15b833ec29…` (berisi FD C, lihat catatan) |
+| CI run [43771439646](https://github.com/BxiiDN/iPadOS-Padpipa-6/actions/runs/43771439646) job `firmware` | GitHub ubuntu-24.04, clang/lld dari apt, zlib sistem | `8313aa34e68a151b…` | `3e2ccbf4983288da…` | `60b498850f169a0b…` (berisi FD C) |
+
+- **FD reproducible lintas mesin** untuk path yang sama: hash sama persis di kedua path.
+- **`boot-stage1.img` belum**: header `mtime` gzip sudah 0 (`bootimg.py`), tetapi zlib-ng dan zlib klasik menghasilkan stream deflate berbeda dari input yang identik. `check_bootimg.py` kini mencetak `fd_sha256` (FD hasil dekompresi, tanpa shim) untuk membandingkan isi. Supaya image bit-identik, kompresor harus sama; kandidatnya adalah zlib klasik yang dikunci di build.
+
+Catatan: di run ini `bootimg` memakai FD dari path C karena variabel `UNIXNU_UEFI` terbawa dari build C (bug skrip; `fd_sha256` = `3e2ccbf4…`). Sudah diperbaiki: image tahap 1 kini memakai FD path kanonis.
