@@ -1,0 +1,16 @@
+# Pinned checkouts and build output (scripts/wsl/build.sh)
+/work/
+/out/
+/build/
+# Proprietary firmware, Apple files, the platform seed and backups never go into Git
+/.cache/
+/backup/
+*.ipsw
+*.dmg
+*.img
+*.fd
+# Raw adb dumps may hold device identifiers; unit-facts.json keeps only hashes
+/device/*/collected-*.kv
+/logs/device/
+__pycache__/
+*.pyc
